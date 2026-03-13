@@ -1,0 +1,41 @@
+# Java / Spring Boot
+*.class
+*.jar
+*.war
+*.ear
+target/
+out/
+.gradle/
+build/
+
+# Node / frontend
+node_modules/
+dist/
+coverage/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+
+# Logs and runtime
+*.log
+*.out
+
+# Env files
+.env
+.env.*
+
+# Python artifacts (tooling)
+__pycache__/
+*.pyc
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/

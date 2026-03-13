@@ -1,0 +1,26 @@
+# VCS
+.git/
+.gitignore
+
+# Build outputs
+node_modules/
+target/
+build/
+dist/
+coverage/
+
+# Terraform and local state
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Env and secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# Docker files
+Dockerfile*
+.dockerignore

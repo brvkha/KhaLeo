@@ -1,0 +1,18 @@
+# Terraform local artifacts
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Variable files
+*.tfvars
+*.tfvars.json
+
+# Secrets and env
+.env
+.env.*
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db
