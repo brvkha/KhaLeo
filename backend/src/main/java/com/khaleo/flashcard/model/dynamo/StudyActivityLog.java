@@ -22,18 +22,35 @@ public class StudyActivityLog {
     private String timestamp;
     private String userId;
     private String cardId;
+    private String deckId;
     private RatingGiven ratingGiven;
     private Long timeSpentMs;
+    private Integer newInterval;
+    private String newEaseFactor;
     private String writeStatus;
 
     public static StudyActivityLog of(UUID userId, UUID cardId, RatingGiven ratingGiven, Long timeSpentMs) {
+        return of(userId, cardId, null, ratingGiven, timeSpentMs, null, null);
+    }
+
+    public static StudyActivityLog of(
+            UUID userId,
+            UUID cardId,
+            UUID deckId,
+            RatingGiven ratingGiven,
+            Long timeSpentMs,
+            Integer newInterval,
+            java.math.BigDecimal newEaseFactor) {
         return StudyActivityLog.builder()
                 .logId(UUID.randomUUID().toString())
                 .timestamp(Instant.now().toString())
                 .userId(userId.toString())
                 .cardId(cardId.toString())
+                .deckId(deckId == null ? null : deckId.toString())
                 .ratingGiven(ratingGiven)
                 .timeSpentMs(timeSpentMs)
+                .newInterval(newInterval)
+                .newEaseFactor(newEaseFactor == null ? null : newEaseFactor.toPlainString())
                 .writeStatus("PENDING")
                 .build();
     }
@@ -45,8 +62,17 @@ public class StudyActivityLog {
         item.put("timestamp", AttributeValue.fromS(timestamp));
         item.put("userId", AttributeValue.fromS(userId));
         item.put("cardId", AttributeValue.fromS(cardId));
+        if (!isBlank(deckId)) {
+            item.put("deckId", AttributeValue.fromS(deckId));
+        }
         item.put("ratingGiven", AttributeValue.fromS(ratingGiven.name()));
         item.put("timeSpentMs", AttributeValue.fromN(String.valueOf(timeSpentMs)));
+        if (newInterval != null) {
+            item.put("newInterval", AttributeValue.fromN(String.valueOf(newInterval)));
+        }
+        if (!isBlank(newEaseFactor)) {
+            item.put("newEaseFactor", AttributeValue.fromN(newEaseFactor));
+        }
         item.put("writeStatus", AttributeValue.fromS(writeStatus == null ? "PENDING" : writeStatus));
         return item;
     }

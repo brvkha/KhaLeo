@@ -19,6 +19,20 @@ public interface CardRepository extends JpaRepository<Card, UUID> {
     @Query("""
             select c from Card c
             where c.deck.id = :deckId
+                and not exists (
+                    select 1 from CardLearningState cls
+                    where cls.card.id = c.id and cls.user.id = :userId
+                )
+            order by c.id asc
+            """)
+    List<Card> findUnseenCardsInDeck(
+            @Param("deckId") UUID deckId,
+            @Param("userId") UUID userId,
+            Pageable pageable);
+
+    @Query("""
+            select c from Card c
+            where c.deck.id = :deckId
                 and (:frontText is null or lower(coalesce(c.frontText, '')) like lower(concat('%', :frontText, '%')))
                 and (:backText is null or lower(coalesce(c.backText, '')) like lower(concat('%', :backText, '%')))
                 and (:vocabulary is null or lower(coalesce(c.frontText, '')) = lower(:vocabulary) or lower(coalesce(c.backText, '')) = lower(:vocabulary))

@@ -20,7 +20,7 @@ resource "aws_dynamodb_table" "study_activity_log" {
   }
 
   global_secondary_index {
-    name            = "userId-timestamp-index"
+    name            = var.study_activity_log_user_index_name
     hash_key        = "userId"
     range_key       = "timestamp"
     projection_type = "ALL"
