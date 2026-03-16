@@ -2,6 +2,11 @@
 <project version="4">
   <component name="RemoteRepositoriesConfiguration">
     <remote-repository>
+      <option name="id" value="splunk-artifactory" />
+      <option name="name" value="Splunk Artifactory" />
+      <option name="url" value="https://splunk.jfrog.io/splunk/ext-releases-local" />
+    </remote-repository>
+    <remote-repository>
       <option name="id" value="central" />
       <option name="name" value="Central Repository" />
       <option name="url" value="https://repo.maven.apache.org/maven2" />
