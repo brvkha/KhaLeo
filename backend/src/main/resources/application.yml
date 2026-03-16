@@ -37,6 +37,17 @@ app:
     region: ${AWS_REGION:us-east-1}
     endpoint: ${DYNAMODB_ENDPOINT:}
     study-activity-log-table: ${STUDY_ACTIVITY_LOG_TABLE:StudyActivityLog}
+  media:
+    s3:
+      bucket: ${MEDIA_S3_BUCKET:khaleo-media}
+      key-prefix: ${MEDIA_S3_KEY_PREFIX:uploads}
+      region: ${MEDIA_S3_REGION:${AWS_REGION:us-east-1}}
+      endpoint: ${MEDIA_S3_ENDPOINT:}
+      presigned-url-ttl-seconds: ${MEDIA_PRESIGNED_URL_TTL_SECONDS:300}
+      max-size-bytes: ${MEDIA_MAX_SIZE_BYTES:5242880}
+    authz:
+      requests-per-minute: ${MEDIA_AUTHZ_REQUESTS_PER_MINUTE:30}
+      allowed-content-types: ${MEDIA_ALLOWED_CONTENT_TYPES:image/jpeg,image/png,audio/mpeg,audio/webm}
   auth:
     jwt:
       issuer: ${JWT_ISSUER:khaleo}

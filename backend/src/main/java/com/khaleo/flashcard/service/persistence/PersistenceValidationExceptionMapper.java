@@ -100,6 +100,38 @@ public class PersistenceValidationExceptionMapper {
                 "persistence_rejected_missing_relationship");
     }
 
+    public RuntimeException deckNotFound(UUID deckId) {
+        return logged(
+                PersistenceErrorCode.DECK_NOT_FOUND,
+                "Deck not found: " + deckId,
+                null,
+                "persistence_rejected_deck_not_found");
+    }
+
+    public RuntimeException cardNotFound(UUID cardId) {
+        return logged(
+                PersistenceErrorCode.CARD_NOT_FOUND,
+                "Card not found: " + cardId,
+                null,
+                "persistence_rejected_card_not_found");
+    }
+
+    public RuntimeException authorizationDenied(String operation, String resourceType, String resourceKey) {
+        return logged(
+                PersistenceErrorCode.AUTHORIZATION_DENIED,
+                "Authorization denied for operation=" + operation + " resource=" + resourceType + " key=" + resourceKey,
+                null,
+                "persistence_rejected_authorization_denied");
+    }
+
+    public RuntimeException invalidPagination(Integer page, Integer size) {
+        return logged(
+                PersistenceErrorCode.INVALID_PAGINATION,
+                "Invalid pagination request page=" + page + " size=" + size,
+                null,
+                "persistence_rejected_invalid_pagination");
+    }
+
     private RuntimeException logged(
             PersistenceErrorCode code,
             String message,

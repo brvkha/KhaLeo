@@ -11,9 +11,13 @@ import com.khaleo.flashcard.repository.UserRepository;
 import com.khaleo.flashcard.service.persistence.PersistenceValidationException;
 import com.khaleo.flashcard.service.persistence.PersistenceValidationException.PersistenceErrorCode;
 import com.khaleo.flashcard.service.persistence.RelationalPersistenceService;
+import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -30,6 +34,11 @@ class CardContentValidationIT extends IntegrationPersistenceTestBase {
     @Autowired
     private DeckRepository deckRepository;
 
+        @AfterEach
+        void clearContext() {
+                SecurityContextHolder.clearContext();
+        }
+
     @Test
     void shouldRejectCardWhenFrontOrBackHasNoContent() {
         User user = userRepository.save(User.builder()
@@ -44,6 +53,8 @@ class CardContentValidationIT extends IntegrationPersistenceTestBase {
                 .isPublic(false)
                 .build());
 
+        authenticateAs(user.getId());
+
         assertThatThrownBy(() -> service.createCard(deck.getId(), new RelationalPersistenceService.CreateCardRequest(
                 "   ",
                 null,
@@ -53,4 +64,9 @@ class CardContentValidationIT extends IntegrationPersistenceTestBase {
                 .satisfies(ex -> assertThat(((PersistenceValidationException) ex).getErrorCode())
                         .isEqualTo(PersistenceErrorCode.INVALID_CARD_CONTENT));
     }
+
+        private void authenticateAs(UUID userId) {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken(userId.toString(), null, java.util.Collections.emptyList()));
+        }
 }

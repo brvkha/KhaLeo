@@ -54,3 +54,22 @@ resource "aws_cloudwatch_metric_alarm" "auth_refresh_rejection_high" {
 
   tags = var.common_tags
 }
+
+resource "aws_cloudwatch_metric_alarm" "media_authorization_rate_limited_high" {
+  alarm_name          = "khaleo-media-authorization-rate-limited-high"
+  alarm_description   = "High rate of media authorization throttling events"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  threshold           = 10
+  metric_name         = "MediaAuthorizationRateLimited"
+  namespace           = "KhaLeo/Backend"
+  period              = 60
+  statistic           = "Sum"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Service = "flashcard-backend"
+  }
+
+  tags = var.common_tags
+}

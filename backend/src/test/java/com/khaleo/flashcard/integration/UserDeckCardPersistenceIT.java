@@ -10,9 +10,13 @@ import com.khaleo.flashcard.repository.CardRepository;
 import com.khaleo.flashcard.repository.DeckRepository;
 import com.khaleo.flashcard.repository.UserRepository;
 import com.khaleo.flashcard.service.persistence.RelationalPersistenceService;
+import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -32,6 +36,11 @@ class UserDeckCardPersistenceIT extends IntegrationPersistenceTestBase {
     @Autowired
     private CardRepository cardRepository;
 
+        @AfterEach
+        void clearContext() {
+                SecurityContextHolder.clearContext();
+        }
+
     @Test
     void shouldPersistUserDeckAndCardWithValidRelationships() {
         User user = service.createUser(new RelationalPersistenceService.CreateUserRequest(
@@ -45,6 +54,8 @@ class UserDeckCardPersistenceIT extends IntegrationPersistenceTestBase {
                 null,
                 false,
                 "foundational,core"));
+
+        authenticateAs(user.getId());
 
         Card card = service.createCard(deck.getId(), new RelationalPersistenceService.CreateCardRequest(
                 "Front",
@@ -63,4 +74,9 @@ class UserDeckCardPersistenceIT extends IntegrationPersistenceTestBase {
         Card storedCard = cardRepository.findById(card.getId()).orElseThrow();
         assertThat(storedCard.getDeck().getId()).isEqualTo(deck.getId());
     }
+
+        private void authenticateAs(UUID userId) {
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken(userId.toString(), null, java.util.Collections.emptyList()));
+        }
 }

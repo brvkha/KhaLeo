@@ -3,6 +3,8 @@ package com.khaleo.flashcard.config.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.khaleo.flashcard.service.auth.AuthDomainException;
 import com.khaleo.flashcard.service.auth.AuthErrorCode;
+import com.khaleo.flashcard.service.persistence.PersistenceValidationException;
+import com.khaleo.flashcard.service.persistence.PersistenceValidationException.PersistenceErrorCode;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -44,6 +46,18 @@ public class AuthExceptionHandler implements AuthenticationEntryPoint, AccessDen
                 request.getRequestURI()));
     }
 
+    @ExceptionHandler(PersistenceValidationException.class)
+    public ResponseEntity<Map<String, Object>> handlePersistenceValidation(
+            PersistenceValidationException ex,
+            HttpServletRequest request) {
+        HttpStatus status = mapPersistenceStatus(ex.getErrorCode());
+        return ResponseEntity.status(status.value()).body(errorBody(
+                status,
+                ex.getErrorCode().name(),
+                ex.getMessage(),
+                request.getRequestURI()));
+    }
+
     @Override
     public void commence(
             HttpServletRequest request,
@@ -74,5 +88,19 @@ public class AuthExceptionHandler implements AuthenticationEntryPoint, AccessDen
                 "error", error,
                 "message", message,
                 "path", path);
+    }
+
+    private HttpStatus mapPersistenceStatus(PersistenceErrorCode errorCode) {
+        if (errorCode == null) {
+            return HttpStatus.BAD_REQUEST;
+        }
+
+        return switch (errorCode) {
+            case AUTHORIZATION_DENIED -> HttpStatus.FORBIDDEN;
+            case DECK_NOT_FOUND, CARD_NOT_FOUND, MISSING_RELATIONSHIP -> HttpStatus.NOT_FOUND;
+            case MEDIA_AUTH_RATE_LIMIT_EXCEEDED -> HttpStatus.TOO_MANY_REQUESTS;
+            case DUPLICATE_EMAIL -> HttpStatus.CONFLICT;
+            default -> HttpStatus.BAD_REQUEST;
+        };
     }
 }
