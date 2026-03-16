@@ -1,30 +1,27 @@
 # Phase 6 Test and Coverage Summary
 
 Date: 2026-03-16
-Feature: 001-core-database-entities
-Task: T054
+Feature: 002-auth-security-verification
+Task: T053
 
 ## Command Execution
 
-Executed full backend suite via Java test runner equivalent of Maven test scope.
-Coverage mode was enabled for focused reporting on RelationalPersistenceService.
+Executed full backend suite using the workspace test runner for Java/JUnit tests.
+US2 and US3 focused suites were executed first, followed by a full-suite run.
 
 ## Results
 
-- Total tests passed: 28
+- Total tests passed: 61
 - Total tests failed: 0
 - Integration environment status: stable (singleton MySQL Testcontainer with consistent datasource wiring)
-- Async logging test status: stable (dead-letter queue state reset between tests)
+- Auth lifecycle test status: stable (register, verify, login, refresh, logout, forgot-password, reset-password, lockout)
 
 ## Coverage Snapshot
 
-File: `backend/src/main/java/com/khaleo/flashcard/service/persistence/RelationalPersistenceService.java`
-
-- Statements covered: 1 / 87
-- Branches covered: 0 / 14
-- Declarations covered: 1 / 15
-- Coverage: 1.72%
+- Coverage mode was not executed in this phase report.
+- Functional completeness was prioritized for contract/integration security behavior and full regression stability.
 
 ## Notes
 
-Coverage snapshot in this file reflects the initial Phase 6 evidence run. Functional verification has since been re-executed with all tests passing after environment stabilization fixes.
+- US1, US2, and US3 authentication flows are now fully validated through unit, contract, and integration tests.
+- One integration test setup was adjusted to honor database constraints while still validating refresh expiry behavior.

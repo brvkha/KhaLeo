@@ -17,6 +17,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -77,6 +78,25 @@ public class User extends BaseAuditableEntity {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private List<CardLearningState> learningStates = new ArrayList<>();
 
+    @Builder.Default
+    @Column(name = "failed_login_attempts", nullable = false)
+    private Integer failedLoginAttempts = 0;
+
+    @Column(name = "account_locked_until")
+    private Instant accountLockedUntil;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<RefreshToken> refreshTokens = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<EmailVerificationToken> emailVerificationTokens = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<PasswordResetToken> passwordResetTokens = new ArrayList<>();
+
     @PrePersist
     @PreUpdate
     void applyDefaults() {
@@ -90,6 +110,12 @@ public class User extends BaseAuditableEntity {
         }
         if (dailyLearningLimit == null) {
             dailyLearningLimit = 9999;
+        }
+        if (failedLoginAttempts == null) {
+            failedLoginAttempts = 0;
+        }
+        if (failedLoginAttempts < 0) {
+            throw new IllegalStateException("failedLoginAttempts must be non-negative.");
         }
         if (dailyLearningLimit < 1 || dailyLearningLimit > 9999) {
             throw new IllegalStateException("dailyLearningLimit must be between 1 and 9999.");
