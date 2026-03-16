@@ -1,4 +1,0 @@
-com\khaleo\flashcard\config\JpaAuditingConfig.class
-com\khaleo\flashcard\FlashcardApplication.class
-com\khaleo\flashcard\config\activitylog\ActivityLogPublishPolicy$DefaultActivityLogPublishPolicy.class
-com\khaleo\flashcard\config\activitylog\ActivityLogPublishPolicy.class

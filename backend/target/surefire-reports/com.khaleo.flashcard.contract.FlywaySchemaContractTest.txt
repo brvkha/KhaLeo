@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.khaleo.flashcard.contract.FlywaySchemaContractTest
--------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 24.80 s -- in com.khaleo.flashcard.contract.FlywaySchemaContractTest
