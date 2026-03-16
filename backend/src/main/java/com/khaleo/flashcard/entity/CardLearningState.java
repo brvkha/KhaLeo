@@ -69,6 +69,14 @@ public class CardLearningState extends BaseAuditableEntity {
     @Column(name = "next_review_date")
     private Instant nextReviewDate;
 
+    @Column(name = "last_reviewed_at")
+    private Instant lastReviewedAt;
+
+    @Builder.Default
+    @Min(0)
+    @Column(name = "learning_step_good_count", nullable = false)
+    private Integer learningStepGoodCount = 0;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version;
@@ -83,6 +91,9 @@ public class CardLearningState extends BaseAuditableEntity {
         }
         if (intervalInDays == null) {
             intervalInDays = 0;
+        }
+        if (learningStepGoodCount == null) {
+            learningStepGoodCount = 0;
         }
     }
 }

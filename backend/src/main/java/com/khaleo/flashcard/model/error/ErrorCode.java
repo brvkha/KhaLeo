@@ -1,0 +1,11 @@
+package com.khaleo.flashcard.model.error;
+
+public enum ErrorCode {
+    INVALID_CONTINUATION_TOKEN,
+    INVALID_PAGINATION,
+    DECK_NOT_FOUND,
+    CARD_NOT_FOUND,
+    AUTHORIZATION_DENIED,
+    RATING_INVALID,
+    DAILY_LIMIT_REACHED_FOR_NEW_CARDS
+}

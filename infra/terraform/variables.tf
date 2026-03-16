@@ -10,6 +10,18 @@ variable "study_activity_log_table_name" {
   default     = "StudyActivityLog"
 }
 
+variable "study_activity_log_user_index_name" {
+  description = "Global secondary index name for study activity lookups by user"
+  type        = string
+  default     = "userId-timestamp-index"
+}
+
+variable "study_activity_log_rate_alarm_threshold" {
+  description = "Threshold for high study activity log failures per minute"
+  type        = number
+  default     = 5
+}
+
 variable "aurora_cluster_identifier" {
   description = "Aurora MySQL cluster identifier"
   type        = string
