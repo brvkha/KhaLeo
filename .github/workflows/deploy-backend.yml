@@ -1,0 +1,139 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      artifactSha:
+        description: "Optional commit SHA to redeploy"
+        required: false
+
+jobs:
+  workflow-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deploy workflow semantics
+        run: |
+          set -euo pipefail
+          grep -q "push:" .github/workflows/deploy-backend.yml
+          grep -q "aws ssm send-command" .github/workflows/deploy-backend.yml
+          grep -q "failed_targets" .github/workflows/deploy-backend.yml
+
+  deploy:
+    needs: workflow-contract
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+      ARTIFACT_BUCKET: ${{ vars.DEPLOY_ARTIFACT_BUCKET || 'kha-leo-build-artifacts' }}
+      DEPLOY_TARGET_TAG_KEY: ${{ vars.DEPLOY_TARGET_TAG_KEY || 'Role' }}
+      DEPLOY_TARGET_TAG_VALUE: ${{ vars.DEPLOY_TARGET_TAG_VALUE || 'khaleo-backend' }}
+      SERVICE_NAME: ${{ vars.BACKEND_SERVICE_NAME || 'flashcard-backend' }}
+      TARGET_JAR_PATH: ${{ vars.BACKEND_TARGET_JAR_PATH || '/opt/khaleo/flashcard-backend/app.jar' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build backend artifact
+        working-directory: backend
+        run: mvn -B clean package -DskipTests
+
+      - name: Resolve deployment SHA
+        id: sha
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA="${{ github.event.inputs.artifactSha || github.sha }}"
+          echo "value=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "Using deployment SHA: ${SHA}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload immutable artifact to S3
+        id: upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARTIFACT_KEY="backend/${{ steps.sha.outputs.value }}/app.jar"
+          aws s3 cp "backend/target/flashcard-backend-0.1.0-SNAPSHOT.jar" "s3://${ARTIFACT_BUCKET}/${ARTIFACT_KEY}"
+          echo "artifact_key=${ARTIFACT_KEY}" >> "$GITHUB_OUTPUT"
+          echo "artifact_uri=s3://${ARTIFACT_BUCKET}/${ARTIFACT_KEY}" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch deployment command to all targets
+        id: dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_DIR=$(dirname "${TARGET_JAR_PATH}")
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --comment "KhaLeo backend deploy ${{ steps.sha.outputs.value }}" \
+            --targets "Key=tag:${DEPLOY_TARGET_TAG_KEY},Values=${DEPLOY_TARGET_TAG_VALUE}" \
+            --parameters commands="sudo mkdir -p ${TARGET_DIR}","sudo aws s3 cp ${{ steps.upload.outputs.artifact_uri }} ${TARGET_JAR_PATH}","sudo systemctl daemon-reload","sudo systemctl restart ${SERVICE_NAME}","sudo systemctl is-active --quiet ${SERVICE_NAME}" \
+            --query "Command.CommandId" \
+            --output text)
+          echo "command_id=${COMMAND_ID}" >> "$GITHUB_OUTPUT"
+          echo "Dispatched SSM command: ${COMMAND_ID}"
+
+      - name: Poll per-target results and fail on any failed target
+        id: aggregate
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMAND_ID="${{ steps.dispatch.outputs.command_id }}"
+          ATTEMPTS=0
+          MAX_ATTEMPTS=30
+          SLEEP_SECONDS=10
+
+          while [[ ${ATTEMPTS} -lt ${MAX_ATTEMPTS} ]]; do
+            INCOMPLETE=$(aws ssm list-command-invocations --command-id "${COMMAND_ID}" --details --query "length(CommandInvocations[?Status!='Success' && Status!='Failed' && Status!='TimedOut' && Status!='Cancelled'])" --output text)
+            if [[ "${INCOMPLETE}" == "0" ]]; then
+              break
+            fi
+            ATTEMPTS=$((ATTEMPTS + 1))
+            sleep "${SLEEP_SECONDS}"
+          done
+
+          STATUS_TABLE=$(aws ssm list-command-invocations --command-id "${COMMAND_ID}" --details --query "CommandInvocations[].{instance:InstanceId,status:Status,details:StatusDetails}" --output table)
+          echo "${STATUS_TABLE}"
+
+          FAILED_TARGETS=$(aws ssm list-command-invocations --command-id "${COMMAND_ID}" --details --query "length(CommandInvocations[?Status=='Failed' || Status=='TimedOut' || Status=='Cancelled'])" --output text)
+          TOTAL_TARGETS=$(aws ssm list-command-invocations --command-id "${COMMAND_ID}" --details --query "length(CommandInvocations)" --output text)
+
+          {
+            echo "### Deployment Summary"
+            echo "- Artifact SHA: ${{ steps.sha.outputs.value }}"
+            echo "- Artifact URI: ${{ steps.upload.outputs.artifact_uri }}"
+            echo "- SSM Command ID: ${COMMAND_ID}"
+            echo "- Total targets: ${TOTAL_TARGETS}"
+            echo "- Failed targets: ${FAILED_TARGETS}"
+            echo ""
+            echo "\`\`\`"
+            echo "${STATUS_TABLE}"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "failed_targets=${FAILED_TARGETS}" >> "$GITHUB_OUTPUT"
+          if [[ "${FAILED_TARGETS}" != "0" ]]; then
+            echo "One or more deployment targets failed."
+            exit 1
+          fi

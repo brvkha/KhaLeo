@@ -73,3 +73,22 @@ resource "aws_cloudwatch_metric_alarm" "media_authorization_rate_limited_high" {
 
   tags = var.common_tags
 }
+
+resource "aws_cloudwatch_metric_alarm" "admin_authorization_denials_high" {
+  alarm_name          = "khaleo-admin-authorization-denials-high"
+  alarm_description   = "High rate of admin authorization denials"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  threshold           = var.admin_authorization_denials_alarm_threshold
+  metric_name         = "AdminAuthorizationDenied"
+  namespace           = "KhaLeo/Backend"
+  period              = 300
+  statistic           = "Sum"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Service = "flashcard-backend"
+  }
+
+  tags = var.common_tags
+}

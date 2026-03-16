@@ -1,27 +1,31 @@
 # Phase 6 Test and Coverage Summary
 
 Date: 2026-03-16
-Feature: 002-auth-security-verification
-Task: T053
+Feature: 005-admin-observability-devops
+Task: T046
 
 ## Command Execution
 
-Executed full backend suite using the workspace test runner for Java/JUnit tests.
-US2 and US3 focused suites were executed first, followed by a full-suite run.
+- Executed focused US2/US3 test set:
+	- LoggingConfigurationContractTest
+	- SplunkAsyncNonBlockingIT
+	- AdminObservabilityInstrumentationTest
+	- DeployWorkflowContractTest
+	- DeploymentAggregationIT
+- Executed full backend suite using workspace Java test runner.
 
 ## Results
 
-- Total tests passed: 61
-- Total tests failed: 0
-- Integration environment status: stable (singleton MySQL Testcontainer with consistent datasource wiring)
-- Auth lifecycle test status: stable (register, verify, login, refresh, logout, forgot-password, reset-password, lockout)
+- Focused US2/US3 tests: 12 passed, 0 failed.
+- Full backend suite: 155 passed, 0 failed.
+- Integration environment status: stable.
 
 ## Coverage Snapshot
 
 - Coverage mode was not executed in this phase report.
-- Functional completeness was prioritized for contract/integration security behavior and full regression stability.
+- Regression confidence is based on full-suite pass and targeted US2/US3 contract/integration/unit validation.
 
 ## Notes
 
-- US1, US2, and US3 authentication flows are now fully validated through unit, contract, and integration tests.
-- One integration test setup was adjusted to honor database constraints while still validating refresh expiry behavior.
+- Added deploy workflow contract checks and deployment result aggregation integration tests.
+- Added observability configuration and instrumentation tests for Splunk async logging and admin/deployment signals.

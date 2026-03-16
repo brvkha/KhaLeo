@@ -73,3 +73,22 @@ resource "aws_cloudwatch_metric_alarm" "media_cleanup_failure_high" {
 
   tags = var.common_tags
 }
+
+resource "aws_cloudwatch_metric_alarm" "deployment_command_failure_high" {
+  alarm_name          = "khaleo-deployment-command-failure-high"
+  alarm_description   = "Deployment target command failures detected"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  threshold           = var.deployment_command_failure_alarm_threshold
+  metric_name         = "DeploymentCommandFailure"
+  namespace           = "KhaLeo/Backend"
+  period              = 300
+  statistic           = "Sum"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Service = "flashcard-backend"
+  }
+
+  tags = var.common_tags
+}

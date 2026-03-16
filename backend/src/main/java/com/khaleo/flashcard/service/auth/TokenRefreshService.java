@@ -39,6 +39,11 @@ public class TokenRefreshService {
         }
 
         User user = refreshToken.getUser();
+        if (user.getBannedAt() != null) {
+            authAuditLogger.logEvent("auth_refresh_blocked_banned", Map.of("userId", user.getId()));
+            throw new AuthDomainException(HttpStatus.FORBIDDEN, AuthErrorCode.BANNED_USER_REQUEST_DENIED, "Banned account access denied.");
+        }
+
         String accessToken = jwtTokenService.createAccessToken(user.getId().toString(), Map.of("role", user.getRole().name()));
         authAuditLogger.logEvent("auth_refresh_success", Map.of("userId", user.getId()));
         return new RefreshResult(accessToken, jwtTokenService.accessTokenTtlSeconds());

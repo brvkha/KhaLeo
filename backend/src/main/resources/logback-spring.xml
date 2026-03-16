@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <property name="APP_NAME" value="flashcard-backend"/>
+    <springProperty scope="context" name="SPLUNK_ENABLED" source="app.observability.splunk.enabled" defaultValue="false"/>
+    <springProperty scope="context" name="SPLUNK_HEC_URL" source="app.observability.splunk.hec-url" defaultValue="http://localhost:8088/services/collector/event"/>
+    <springProperty scope="context" name="SPLUNK_HEC_TOKEN" source="app.observability.splunk.hec-token" defaultValue="disabled-token"/>
+    <springProperty scope="context" name="SPLUNK_SOURCE" source="app.observability.splunk.source" defaultValue="flashcard-backend"/>
+    <springProperty scope="context" name="SPLUNK_SOURCETYPE" source="app.observability.splunk.source-type" defaultValue="kha-leo:backend"/>
+    <springProperty scope="context" name="SPLUNK_INDEX" source="app.observability.splunk.index" defaultValue="main"/>
 
     <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
@@ -8,9 +14,27 @@
         </encoder>
     </appender>
 
+    <appender name="SPLUNK_HEC" class="com.splunk.logging.HttpEventCollectorLogbackAppender">
+        <url>${SPLUNK_HEC_URL}</url>
+        <token>${SPLUNK_HEC_TOKEN}</token>
+        <source>${SPLUNK_SOURCE}</source>
+        <sourcetype>${SPLUNK_SOURCETYPE}</sourcetype>
+        <index>${SPLUNK_INDEX}</index>
+        <disableCertificateValidation>true</disableCertificateValidation>
+        <batch_size_count>1</batch_size_count>
+    </appender>
+
+    <appender name="ASYNC_SPLUNK" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>2048</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="SPLUNK_HEC"/>
+    </appender>
+
     <logger name="com.khaleo.flashcard" level="INFO"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE_JSON"/>
+        <appender-ref ref="ASYNC_SPLUNK"/>
     </root>
 </configuration>

@@ -96,8 +96,8 @@ public class AuthExceptionHandler implements AuthenticationEntryPoint, AccessDen
         }
 
         return switch (errorCode) {
-            case AUTHORIZATION_DENIED -> HttpStatus.FORBIDDEN;
-            case DECK_NOT_FOUND, CARD_NOT_FOUND, MISSING_RELATIONSHIP -> HttpStatus.NOT_FOUND;
+            case AUTHORIZATION_DENIED, BANNED_USER_REQUEST_DENIED -> HttpStatus.FORBIDDEN;
+            case USER_NOT_FOUND, DECK_NOT_FOUND, CARD_NOT_FOUND, MISSING_RELATIONSHIP -> HttpStatus.NOT_FOUND;
             case MEDIA_AUTH_RATE_LIMIT_EXCEEDED -> HttpStatus.TOO_MANY_REQUESTS;
             case DUPLICATE_EMAIL -> HttpStatus.CONFLICT;
             default -> HttpStatus.BAD_REQUEST;

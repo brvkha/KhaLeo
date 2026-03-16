@@ -55,6 +55,11 @@ public class AuthenticationService {
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> invalidCredentials(normalizedEmail));
 
+        if (user.getBannedAt() != null) {
+            authAuditLogger.logEvent("auth_login_blocked_banned", Map.of("email", normalizedEmail));
+            throw new AuthDomainException(HttpStatus.FORBIDDEN, AuthErrorCode.BANNED_USER_REQUEST_DENIED, "Banned account access denied.");
+        }
+
         if (loginLockoutService.isCurrentlyLocked(user)) {
             authAuditLogger.logEvent("auth_login_blocked_locked", Map.of("email", normalizedEmail));
             loginLockoutService.ensureNotLocked(user);

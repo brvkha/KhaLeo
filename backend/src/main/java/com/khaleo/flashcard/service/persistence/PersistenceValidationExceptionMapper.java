@@ -116,12 +116,28 @@ public class PersistenceValidationExceptionMapper {
                 "persistence_rejected_card_not_found");
     }
 
+    public RuntimeException userNotFound(UUID userId) {
+        return logged(
+                PersistenceErrorCode.USER_NOT_FOUND,
+                "User not found: " + userId,
+                null,
+                "persistence_rejected_user_not_found");
+    }
+
     public RuntimeException authorizationDenied(String operation, String resourceType, String resourceKey) {
         return logged(
                 PersistenceErrorCode.AUTHORIZATION_DENIED,
                 "Authorization denied for operation=" + operation + " resource=" + resourceType + " key=" + resourceKey,
                 null,
                 "persistence_rejected_authorization_denied");
+    }
+
+    public RuntimeException bannedUserDenied(UUID userId, String operation, String resourceType, String resourceKey) {
+        return logged(
+                PersistenceErrorCode.BANNED_USER_REQUEST_DENIED,
+                "Banned user denied for userId=" + userId + " operation=" + operation + " resource=" + resourceType + " key=" + resourceKey,
+                null,
+                "persistence_rejected_banned_user_denied");
     }
 
     public RuntimeException invalidPagination(Integer page, Integer size) {

@@ -32,4 +32,24 @@ public class NewRelicPersistenceInstrumentation {
                 logId,
                 reason);
     }
+
+    public void recordDeploymentDispatch(String commandId, String instanceId, String status) {
+        log.info("event=new_relic_deploy metric=deployment_dispatch commandId={} instanceId={} status={} count=1",
+                commandId,
+                instanceId,
+                status);
+    }
+
+    public void recordDeploymentResult(String commandId, String instanceId, String status) {
+        log.info("event=new_relic_deploy metric=deployment_result commandId={} instanceId={} status={} count=1",
+                commandId,
+                instanceId,
+                status);
+    }
+
+    public void recordAdminAuthorizationDenied(String path, String principalRole) {
+        log.warn("event=new_relic_security metric=admin_authorization_denied path={} principalRole={} count=1",
+                path,
+                principalRole);
+    }
 }

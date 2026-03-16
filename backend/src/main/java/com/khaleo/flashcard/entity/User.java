@@ -85,6 +85,12 @@ public class User extends BaseAuditableEntity {
     @Column(name = "account_locked_until")
     private Instant accountLockedUntil;
 
+    @Column(name = "banned_at")
+    private Instant bannedAt;
+
+    @Column(name = "banned_by", columnDefinition = "char(36)")
+    private UUID bannedBy;
+
     @Builder.Default
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private List<RefreshToken> refreshTokens = new ArrayList<>();

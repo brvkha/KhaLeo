@@ -77,4 +77,10 @@ public class NewRelicDeckMediaInstrumentation {
                 status,
                 attributes);
     }
+
+    public void recordAdminObservabilityEvent(String eventName, Map<String, Object> attributes) {
+        log.info("event=new_relic_deck_media metric=admin_observability_event eventName={} attributes={} count=1",
+                eventName,
+                attributes);
+    }
 }

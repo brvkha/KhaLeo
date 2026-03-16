@@ -65,3 +65,14 @@ app:
       from: ${AUTH_EMAIL_FROM:no-reply@khaleoshop.click}
       verification-base-url: ${AUTH_VERIFICATION_BASE_URL:https://app.khaleoshop.click/verify}
       reset-base-url: ${AUTH_RESET_BASE_URL:https://app.khaleoshop.click/reset-password}
+  observability:
+    splunk:
+      enabled: ${SPLUNK_ENABLED:false}
+      hec-url: ${SPLUNK_HEC_URL:http://localhost:8088/services/collector/event}
+      hec-token: ${SPLUNK_HEC_TOKEN:disabled-token}
+      source: ${SPLUNK_SOURCE:flashcard-backend}
+      source-type: ${SPLUNK_SOURCE_TYPE:kha-leo:backend}
+      index: ${SPLUNK_INDEX:main}
+    newrelic:
+      agent-enabled: ${NEW_RELIC_AGENT_ENABLED:false}
+      app-name: ${NEW_RELIC_APP_NAME:flashcard-backend}

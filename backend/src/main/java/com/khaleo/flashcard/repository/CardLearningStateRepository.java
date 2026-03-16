@@ -32,6 +32,8 @@ public interface CardLearningStateRepository extends JpaRepository<CardLearningS
             Instant startInclusive,
             Instant endExclusive);
 
+        long countByLastReviewedAtGreaterThanEqual(Instant sinceInclusive);
+
     @Modifying
     void deleteByCardIdIn(Collection<UUID> cardIds);
 }

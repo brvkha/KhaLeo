@@ -37,8 +37,17 @@ public class DeckCardAccessGuard {
     }
 
     public UUID requireAuthenticatedUserId(String operation, String resourceType, String resourceKey) {
-        return currentUserId().orElseThrow(
+        UUID userId = currentUserId().orElseThrow(
                 () -> exceptionMapper.authorizationDenied(operation, resourceType, resourceKey));
+        ensureUserNotBanned(userId, operation, resourceType, resourceKey);
+        return userId;
+    }
+
+    public void ensureUserNotBanned(UUID userId, String operation, String resourceType, String resourceKey) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null && user.getBannedAt() != null) {
+            throw exceptionMapper.bannedUserDenied(userId, operation, resourceType, resourceKey);
+        }
     }
 
     public void ensureCanReadDeck(Deck deck) {
