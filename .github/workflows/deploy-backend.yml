@@ -120,11 +120,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          PARAMS=$(jq -n \
+            --arg script "${{ steps.deploy_script.outputs.content }}" \
+            --arg db "${DB_SECRET_ID}" \
+            --arg jwt "${JWT_SECRET_ID}" \
+            --arg ses "${SES_SECRET_ID}" \
+            --arg env_path "${RUNTIME_ENV_PATH}" \
+            --arg artifact "${{ steps.upload.outputs.artifact_uri }}" \
+            --arg service "${SERVICE_NAME}" \
+            --arg jar "${TARGET_JAR_PATH}" \
+            '{
+              commands: [
+                "echo \($script) | base64 -d | sudo tee /tmp/deploy-via-ssm.sh >/dev/null",
+                "sudo chmod +x /tmp/deploy-via-ssm.sh",
+                "sudo DB_SECRET_ID=\($db) JWT_SECRET_ID=\($jwt) SES_SECRET_ID=\($ses) RUNTIME_ENV_PATH=\($env_path) /tmp/deploy-via-ssm.sh \($artifact) \($service) \($jar)"
+              ]
+            }')
+
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --comment "KhaLeo backend deploy ${{ steps.sha.outputs.value }}" \
             --targets "Key=tag:${DEPLOY_TARGET_TAG_KEY},Values=${DEPLOY_TARGET_TAG_VALUE}" \
-            --parameters commands="echo '${{ steps.deploy_script.outputs.content }}' | base64 -d | sudo tee /tmp/deploy-via-ssm.sh >/dev/null","sudo chmod +x /tmp/deploy-via-ssm.sh","sudo DB_SECRET_ID='${DB_SECRET_ID}' JWT_SECRET_ID='${JWT_SECRET_ID}' SES_SECRET_ID='${SES_SECRET_ID}' RUNTIME_ENV_PATH='${RUNTIME_ENV_PATH}' /tmp/deploy-via-ssm.sh '${{ steps.upload.outputs.artifact_uri }}' '${SERVICE_NAME}' '${TARGET_JAR_PATH}'" \
+            --parameters "$PARAMS" \
             --query "Command.CommandId" \
             --output text)
           echo "command_id=${COMMAND_ID}" >> "$GITHUB_OUTPUT"
