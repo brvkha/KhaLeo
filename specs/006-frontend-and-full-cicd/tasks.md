@@ -31,7 +31,7 @@
 - Partial deployment failures mark workflow failed without auto-rollback.
 
 - [X] T005 [US3] Implement backend+frontend CI gate workflow with explicit quality stages in .github/workflows/ci.yml (depends on T003, Owner: DevOps)
-- [ ] T006 [US3] Enforce OIDC credential step and production environment approval in .github/workflows/deploy-backend.yml (depends on T002, T005, Owner: DevOps)
+- [X] T006 [US3] Enforce OIDC credential step and production environment approval in .github/workflows/deploy-backend.yml (depends on T002, T005, Owner: DevOps)
 - [ ] T007 [US3] Create frontend deploy workflow (build, S3 sync, CloudFront invalidation) in .github/workflows/deploy-frontend.yml (depends on T001, T002, T005, Owner: DevOps)
 - [ ] T008 [US3] Preserve immutable commit-SHA artifact handling and manual rollback dispatch inputs in .github/workflows/deploy-backend.yml (depends on T006, Owner: DevOps)
 - [ ] T009 [P] [US3] Add workflow failure summaries and per-target diagnostics in .github/workflows/deploy-backend.yml (depends on T006, Owner: DevOps)
