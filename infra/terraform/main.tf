@@ -314,6 +314,27 @@ resource "aws_launch_template" "backend" {
     dnf update -y
     dnf install -y java-17-amazon-corretto awscli
     mkdir -p /opt/khaleo/flashcard-backend
+    
+    # Tạo sẵn file service ngay khi EC2 boot lên
+    cat <<EOF > /etc/systemd/system/flashcard-backend.service
+    [Unit]
+    Description=KhaLeo Backend
+    After=network.target
+
+    [Service]
+    Type=simple
+    WorkingDirectory=/opt/khaleo/flashcard-backend
+    EnvironmentFile=-/opt/khaleo/flashcard-backend/runtime-secrets.env
+    ExecStart=/usr/bin/java -jar /opt/khaleo/flashcard-backend/current.jar
+    Restart=always
+    RestartSec=5
+    SuccessExitStatus=143
+
+    [Install]
+    WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable flashcard-backend
   EOT
   )
 
