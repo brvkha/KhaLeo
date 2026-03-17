@@ -83,11 +83,14 @@ write_runtime_env() {
 
 ensure_service_unit() {
   local unit_file="/etc/systemd/system/${SERVICE_NAME}.service"
-  if sudo systemctl list-unit-files --type=service | grep -q "^${SERVICE_NAME}\.service"; then
+
+  if sudo test -f "${unit_file}"; then
+    log "Service file already exists: ${unit_file}"
     return 0
   fi
 
-  log "Service ${SERVICE_NAME}.service not found; creating systemd unit"
+  log "Creating systemd service: ${SERVICE_NAME}"
+
   cat <<EOF | sudo tee "${unit_file}" >/dev/null
 [Unit]
 Description=KhaLeo Backend Service
@@ -104,7 +107,9 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 EOF
+
   sudo chmod 0644 "${unit_file}"
+  sudo systemctl daemon-reload
   sudo systemctl enable "${SERVICE_NAME}"
 }
 
@@ -114,6 +119,6 @@ sudo aws s3 cp "${ARTIFACT_URI}" "${TARGET_JAR_PATH}"
 log "Copied artifact to ${TARGET_JAR_PATH}"
 ensure_service_unit
 sudo systemctl daemon-reload
-sudo systemctl restart "${SERVICE_NAME}"
+sudo systemctl restart "${SERVICE_NAME}" || sudo systemctl start "${SERVICE_NAME}"
 sudo systemctl is-active --quiet "${SERVICE_NAME}"
 log "Deployment completed for ${SERVICE_NAME} using ${ARTIFACT_URI}"
