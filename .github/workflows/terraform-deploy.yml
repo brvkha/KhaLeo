@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   terraform:
+    environment: production
     name: "Terraform Plan & Apply"
     runs-on: ubuntu-latest
     defaults:
