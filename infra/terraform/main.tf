@@ -97,6 +97,78 @@ resource "aws_internet_gateway" "main" {
   })
 }
 
+# ==========================================
+# 1. SSL/TLS CERTIFICATE CHO FRONTEND (CLOUDFRONT)
+# Bắt buộc phải tạo ở us-east-1
+# ==========================================
+resource "aws_acm_certificate" "frontend_cert" {
+  provider          = aws.us_east_1
+  domain_name       = var.root_domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "frontend_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.frontend_cert.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = var.route53_zone_id
+}
+
+resource "aws_acm_certificate_validation" "frontend_cert" {
+  provider                = aws.us_east_1
+  certificate_arn         = aws_acm_certificate.frontend_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.frontend_cert_validation : record.fqdn]
+}
+
+# ==========================================
+# 2. SSL/TLS CERTIFICATE CHO BACKEND (ALB)
+# Tạo ở region mặc định (ap-southeast-1)
+# ==========================================
+resource "aws_acm_certificate" "backend_cert" {
+  domain_name       = local.api_domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "backend_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.backend_cert.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = var.route53_zone_id
+}
+
+resource "aws_acm_certificate_validation" "backend_cert" {
+  certificate_arn         = aws_acm_certificate.backend_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.backend_cert_validation : record.fqdn]
+}
+
 resource "aws_subnet" "public" {
   for_each = local.public_subnet_map
 
@@ -264,27 +336,29 @@ resource "aws_lb_target_group" "backend" {
   tags = var.common_tags
 }
 
-resource "aws_lb_listener" "backend_https" {
-  count = var.alb_certificate_arn != "" ? 1 : 0
+resource "aws_lb_listener" "backend_http" {
+  load_balancer_arn = aws_lb.backend.arn
+  port              = 80
+  protocol          = "HTTP"
 
+  # Chuyển hướng mọi request HTTP sang HTTPS
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+resource "aws_lb_listener" "backend_https" {
   load_balancer_arn = aws_lb.backend.arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = var.alb_certificate_arn
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
-  }
-}
-
-resource "aws_lb_listener" "backend_http" {
-  count = var.alb_certificate_arn == "" ? 1 : 0
-
-  load_balancer_arn = aws_lb.backend.arn
-  port              = 80
-  protocol          = "HTTP"
+  certificate_arn   = aws_acm_certificate_validation.backend_cert.certificate_arn
 
   default_action {
     type             = "forward"
@@ -447,7 +521,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases             = var.cloudfront_acm_certificate_arn != "" ? [var.root_domain_name] : []
+  aliases = [var.root_domain_name]
 
   origin {
     domain_name              = aws_s3_bucket.frontend_bucket.bucket_regional_domain_name
@@ -477,10 +551,10 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = var.cloudfront_acm_certificate_arn == ""
-    acm_certificate_arn            = var.cloudfront_acm_certificate_arn != "" ? var.cloudfront_acm_certificate_arn : null
-    ssl_support_method             = var.cloudfront_acm_certificate_arn != "" ? "sni-only" : null
-    minimum_protocol_version       = var.cloudfront_acm_certificate_arn != "" ? "TLSv1.2_2021" : "TLSv1"
+    acm_certificate_arn            = aws_acm_certificate_validation.frontend_cert.certificate_arn
+    ssl_support_method             = "sni-only"
+    minimum_protocol_version       = "TLSv1.2_2021"
+    cloudfront_default_certificate = false
   }
 
   tags = var.common_tags
