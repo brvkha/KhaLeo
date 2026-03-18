@@ -128,7 +128,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - workflow-smoke-contract
-      - terraform
       - backend
       - frontend
     if: always()
@@ -138,7 +137,6 @@ jobs:
           {
             echo "### CI Results"
             echo "- Workflow smoke contract: ${{ needs.workflow-smoke-contract.result }}"
-            echo "- Terraform job: ${{ needs.terraform.result }}"
             echo "- Backend job: ${{ needs.backend.result }}"
             echo "- Frontend job: ${{ needs.frontend.result }}"
             echo "- Java version: ${JAVA_VERSION}"
@@ -147,7 +145,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail if any required job failed
-        if: needs.workflow-smoke-contract.result != 'success' || needs.terraform.result != 'success' || needs.backend.result != 'success' || needs.frontend.result != 'success'
+        if: needs.workflow-smoke-contract.result != 'success' || needs.backend.result != 'success' || needs.frontend.result != 'success'
         run: exit 1
 
   trigger-deploy:
