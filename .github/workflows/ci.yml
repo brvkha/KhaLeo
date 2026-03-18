@@ -67,7 +67,7 @@ jobs:
       - name: Terraform init (no backend)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: terraform init -backend=false
+        run: terraform init -backend=false -reconfigure -input=false
 
       - name: Terraform validate
         run: terraform validate
