@@ -37,7 +37,7 @@ jobs:
       ARTIFACT_BUCKET: ${{ secrets.ARTIFACT_BUCKET }}
       DEPLOY_TARGET_TAG_KEY: ${{ secrets.DEPLOY_TARGET_TAG_KEY }}
       DEPLOY_TARGET_TAG_VALUE: ${{ secrets.DEPLOY_TARGET_TAG_VALUE }}
-      DEPLOY_TARGET_GROUP_NAME: ${{ vars.DEPLOY_TARGET_GROUP_NAME || 'khaleo-backend-tg' }}
+      DEPLOY_TARGET_GROUP_NAME: khaleo-backend-tg
       SERVICE_NAME: ${{ secrets.DEPLOY_SERVICE_NAME }}
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
       DB_SECRET_ID: ${{ vars.DB_SECRET_ID }}
@@ -135,13 +135,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          TARGET_GROUP_NAME="${DEPLOY_TARGET_GROUP_NAME:-khaleo-backend-tg}"
+
           TG_ARN=$(aws elbv2 describe-target-groups \
-            --names "${DEPLOY_TARGET_GROUP_NAME}" \
+            --names "${TARGET_GROUP_NAME}" \
             --query "TargetGroups[0].TargetGroupArn" \
             --output text)
 
           if [[ -z "${TG_ARN}" || "${TG_ARN}" == "None" ]]; then
-            echo "Unable to resolve target group ARN for ${DEPLOY_TARGET_GROUP_NAME}." >&2
+            echo "Unable to resolve target group ARN for ${TARGET_GROUP_NAME}." >&2
             exit 1
           fi
 
@@ -151,13 +153,14 @@ jobs:
             --output text)
 
           if [[ -z "${INSTANCE_IDS}" ]]; then
-            echo "No instances found in target group ${DEPLOY_TARGET_GROUP_NAME}." >&2
+            echo "No instances found in target group ${TARGET_GROUP_NAME}." >&2
             exit 1
           fi
 
+          echo "target_group_name=${TARGET_GROUP_NAME}" >> "$GITHUB_OUTPUT"
           echo "target_group_arn=${TG_ARN}" >> "$GITHUB_OUTPUT"
           echo "instance_ids=${INSTANCE_IDS}" >> "$GITHUB_OUTPUT"
-          echo "Resolved target group ${DEPLOY_TARGET_GROUP_NAME} instances: ${INSTANCE_IDS}"
+          echo "Resolved target group ${TARGET_GROUP_NAME} instances: ${INSTANCE_IDS}"
 
       - name: Dispatch deployment command to all targets
         id: dispatch
@@ -177,6 +180,7 @@ jobs:
               commands: [
                 "echo \($script) | base64 -d | sudo tee /tmp/deploy-via-ssm.sh >/dev/null",
                 "sudo chmod +x /tmp/deploy-via-ssm.sh",
+                "sudo sed -i 's/\\r$//' /tmp/deploy-via-ssm.sh",
                 "sudo DB_SECRET_ID=\($db) JWT_SECRET_ID=\($jwt) SES_SECRET_ID=\($ses) RUNTIME_ENV_PATH=\($env_path) /tmp/deploy-via-ssm.sh \($artifact) \($service) \($jar)"
               ]
             }')
@@ -222,7 +226,7 @@ jobs:
             echo "- Artifact SHA: ${{ steps.sha.outputs.value }}"
             echo "- Artifact URI: ${{ steps.upload.outputs.artifact_uri }}"
             echo "- SSM Command ID: ${COMMAND_ID}"
-            echo "- Target group: ${DEPLOY_TARGET_GROUP_NAME}"
+            echo "- Target group: ${{ steps.targets.outputs.target_group_name }}"
             echo "- Target group ARN: ${{ steps.targets.outputs.target_group_arn }}"
             echo "- Target instances: ${{ steps.targets.outputs.instance_ids }}"
             echo "- Total targets: ${TOTAL_TARGETS}"
@@ -258,6 +262,58 @@ jobs:
             done
 
             echo "One or more deployment targets failed."
+            exit 1
+          fi
+
+      - name: Verify target group health convergence
+        id: tg_health
+        shell: bash
+        run: |
+          set -euo pipefail
+          TG_ARN="${{ steps.targets.outputs.target_group_arn }}"
+          ATTEMPTS=0
+          MAX_ATTEMPTS=24
+          SLEEP_SECONDS=10
+
+          while [[ ${ATTEMPTS} -lt ${MAX_ATTEMPTS} ]]; do
+            UNHEALTHY_COUNT=$(aws elbv2 describe-target-health \
+              --target-group-arn "${TG_ARN}" \
+              --query "length(TargetHealthDescriptions[?TargetHealth.State!='healthy'])" \
+              --output text)
+
+            if [[ "${UNHEALTHY_COUNT}" == "0" ]]; then
+              break
+            fi
+
+            ATTEMPTS=$((ATTEMPTS + 1))
+            sleep "${SLEEP_SECONDS}"
+          done
+
+          TG_STATUS_TABLE=$(aws elbv2 describe-target-health \
+            --target-group-arn "${TG_ARN}" \
+            --query "TargetHealthDescriptions[].{instance:Target.Id,state:TargetHealth.State,reason:TargetHealth.Reason}" \
+            --output table)
+
+          echo "${TG_STATUS_TABLE}"
+
+          FINAL_UNHEALTHY_COUNT=$(aws elbv2 describe-target-health \
+            --target-group-arn "${TG_ARN}" \
+            --query "length(TargetHealthDescriptions[?TargetHealth.State!='healthy'])" \
+            --output text)
+
+          {
+            echo "### Target Group Health"
+            echo "- Target group: ${{ steps.targets.outputs.target_group_name }}"
+            echo "- Target group ARN: ${TG_ARN}"
+            echo "- Non-healthy targets: ${FINAL_UNHEALTHY_COUNT}"
+            echo ""
+            echo "\`\`\`"
+            echo "${TG_STATUS_TABLE}"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${FINAL_UNHEALTHY_COUNT}" != "0" ]]; then
+            echo "Target group did not converge to healthy after deployment." >&2
             exit 1
           fi
 
