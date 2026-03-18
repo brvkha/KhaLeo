@@ -1,10 +1,10 @@
 terraform {
   backend "s3" {
-    bucket         = "khaleo-tf-state-backend"
-    key            = "flashcard-app/terraform.tfstate"
-    region         = "ap-southeast-1"
-    use_lockfile   = true
-    encrypt        = true
+    bucket       = "khaleo-tf-state-backend"
+    key          = "flashcard-app/terraform.tfstate"
+    region       = "ap-southeast-1"
+    use_lockfile = true
+    encrypt      = true
   }
   required_version = ">= 1.2.0"
   required_providers {
