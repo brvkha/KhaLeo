@@ -271,15 +271,29 @@ jobs:
         run: |
           set -euo pipefail
           TG_ARN="${{ steps.targets.outputs.target_group_arn }}"
+          DEPLOYED_INSTANCE_IDS="${{ steps.targets.outputs.instance_ids }}"
           ATTEMPTS=0
           MAX_ATTEMPTS=24
           SLEEP_SECONDS=10
 
+          check_non_healthy() {
+            local non_healthy=0
+            for INSTANCE_ID in ${DEPLOYED_INSTANCE_IDS}; do
+              STATE=$(aws elbv2 describe-target-health \
+                --target-group-arn "${TG_ARN}" \
+                --targets "Id=${INSTANCE_ID}" \
+                --query "TargetHealthDescriptions[0].TargetHealth.State" \
+                --output text 2>/dev/null || echo "unknown")
+
+              if [[ "${STATE}" != "healthy" ]]; then
+                non_healthy=$((non_healthy + 1))
+              fi
+            done
+            echo "${non_healthy}"
+          }
+
           while [[ ${ATTEMPTS} -lt ${MAX_ATTEMPTS} ]]; do
-            UNHEALTHY_COUNT=$(aws elbv2 describe-target-health \
-              --target-group-arn "${TG_ARN}" \
-              --query "length(TargetHealthDescriptions[?TargetHealth.State!='healthy'])" \
-              --output text)
+            UNHEALTHY_COUNT=$(check_non_healthy)
 
             if [[ "${UNHEALTHY_COUNT}" == "0" ]]; then
               break
@@ -296,15 +310,13 @@ jobs:
 
           echo "${TG_STATUS_TABLE}"
 
-          FINAL_UNHEALTHY_COUNT=$(aws elbv2 describe-target-health \
-            --target-group-arn "${TG_ARN}" \
-            --query "length(TargetHealthDescriptions[?TargetHealth.State!='healthy'])" \
-            --output text)
+          FINAL_UNHEALTHY_COUNT=$(check_non_healthy)
 
           {
             echo "### Target Group Health"
             echo "- Target group: ${{ steps.targets.outputs.target_group_name }}"
             echo "- Target group ARN: ${TG_ARN}"
+            echo "- Deployed instances: ${DEPLOYED_INSTANCE_IDS}"
             echo "- Non-healthy targets: ${FINAL_UNHEALTHY_COUNT}"
             echo ""
             echo "\`\`\`"
