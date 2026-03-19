@@ -74,12 +74,12 @@ build {
   name    = "khaleo-backend-immutable"
   sources = ["source.amazon-ebs.backend"]
 
-  file {
+  provisioner "file" {
     source      = var.app_jar_path
     destination = "/tmp/current.jar"
   }
 
-  shell {
+  provisioner "shell" {
     script = "scripts/provision-backend-ami.sh"
     environment_vars = [
       "DB_SECRET_ID=${var.db_secret_id}",
