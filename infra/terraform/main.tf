@@ -382,6 +382,9 @@ resource "aws_lb" "backend" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
   subnets            = [for subnet in aws_subnet.public : subnet.id]
+  enable_deletion_protection = var.alb_enable_deletion_protection
+  drop_invalid_header_fields = true
+  idle_timeout               = var.alb_idle_timeout
 
   tags = var.common_tags
 }
@@ -392,6 +395,9 @@ resource "aws_lb_target_group" "backend" {
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "instance"
+  deregistration_delay       = var.backend_tg_deregistration_delay
+  load_balancing_algorithm_type = "least_outstanding_requests"
+  slow_start                 = var.backend_tg_slow_start
 
   health_check {
     path                = var.backend_health_check_path
@@ -440,6 +446,7 @@ resource "aws_launch_template" "backend" {
   name_prefix   = "khaleo-backend-"
   image_id      = var.backend_ami_id
   instance_type = var.backend_instance_type
+  update_default_version = true
 
   vpc_security_group_ids = [aws_security_group.backend.id]
 
@@ -484,6 +491,10 @@ EOT
   }
 
   tags = var.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_autoscaling_group" "backend" {
@@ -495,6 +506,9 @@ resource "aws_autoscaling_group" "backend" {
   health_check_grace_period = 300
   vpc_zone_identifier       = [for subnet in aws_subnet.private : subnet.id]
   target_group_arns         = [aws_lb_target_group.backend.arn]
+  default_cooldown          = 120
+  capacity_rebalance        = true
+  termination_policies      = ["OldestLaunchTemplate", "Default"]
 
   launch_template {
     id      = aws_launch_template.backend.id
@@ -520,6 +534,16 @@ resource "aws_autoscaling_group" "backend" {
       value               = tag.value
       propagate_at_launch = true
     }
+  }
+
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = var.backend_refresh_min_healthy_percentage
+      instance_warmup        = var.backend_instance_warmup_seconds
+      skip_matching          = true
+    }
+    triggers = ["launch_template"]
   }
 }
 

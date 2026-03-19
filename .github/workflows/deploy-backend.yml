@@ -220,6 +220,45 @@ jobs:
           echo "old_version=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
           echo "new_version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
 
+      - name: Ensure ASG refresh headroom
+        id: refresh_prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DESIRED=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names "${BACKEND_ASG_NAME}" \
+            --query "AutoScalingGroups[0].DesiredCapacity" \
+            --output text)
+
+          MAX_SIZE=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names "${BACKEND_ASG_NAME}" \
+            --query "AutoScalingGroups[0].MaxSize" \
+            --output text)
+
+          if [[ -z "${DESIRED}" || -z "${MAX_SIZE}" || "${DESIRED}" == "None" || "${MAX_SIZE}" == "None" ]]; then
+            echo "Unable to resolve desired/max capacity for ${BACKEND_ASG_NAME}." >&2
+            exit 1
+          fi
+
+          ORIGINAL_MAX="${MAX_SIZE}"
+          ADJUSTED="false"
+
+          if (( MAX_SIZE <= DESIRED )); then
+            NEW_MAX=$((DESIRED + 1))
+            aws autoscaling update-auto-scaling-group \
+              --auto-scaling-group-name "${BACKEND_ASG_NAME}" \
+              --max-size "${NEW_MAX}"
+            MAX_SIZE="${NEW_MAX}"
+            ADJUSTED="true"
+            echo "Increased ASG max size to ${NEW_MAX} to preserve zero-downtime rollout headroom."
+          fi
+
+          echo "desired_capacity=${DESIRED}" >> "$GITHUB_OUTPUT"
+          echo "original_max_size=${ORIGINAL_MAX}" >> "$GITHUB_OUTPUT"
+          echo "effective_max_size=${MAX_SIZE}" >> "$GITHUB_OUTPUT"
+          echo "max_size_adjusted=${ADJUSTED}" >> "$GITHUB_OUTPUT"
+
       - name: Start ASG instance refresh
         id: refresh
         shell: bash
@@ -227,7 +266,7 @@ jobs:
           set -euo pipefail
           REFRESH_ID=$(aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "${BACKEND_ASG_NAME}" \
-            --preferences '{"MinHealthyPercentage":50,"InstanceWarmup":180}' \
+            --preferences '{"MinHealthyPercentage":100,"InstanceWarmup":180,"SkipMatching":true}' \
             --query "InstanceRefreshId" \
             --output text)
           echo "id=${REFRESH_ID}" >> "$GITHUB_OUTPUT"
@@ -269,6 +308,16 @@ jobs:
           echo "Instance refresh timed out." >&2
           echo "final_status=Timeout" >> "$GITHUB_OUTPUT"
           exit 1
+
+      - name: Restore ASG max size
+        if: always() && steps.refresh_prepare.outputs.max_size_adjusted == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws autoscaling update-auto-scaling-group \
+            --auto-scaling-group-name "${BACKEND_ASG_NAME}" \
+            --max-size "${{ steps.refresh_prepare.outputs.original_max_size }}"
+          echo "Restored ASG max size to ${{ steps.refresh_prepare.outputs.original_max_size }}"
 
       - name: Verify target group health convergence
         id: tg_health
@@ -358,6 +407,9 @@ jobs:
             echo "- Auto Scaling Group: ${BACKEND_ASG_NAME}"
             echo "- Instance refresh ID: ${{ steps.refresh.outputs.id }}"
             echo "- Instance refresh status: ${{ steps.refresh_wait.outputs.final_status }}"
+            echo "- Desired capacity before refresh: ${{ steps.refresh_prepare.outputs.desired_capacity }}"
+            echo "- ASG max size before refresh: ${{ steps.refresh_prepare.outputs.original_max_size }}"
+            echo "- ASG max size adjusted: ${{ steps.refresh_prepare.outputs.max_size_adjusted }}"
             echo "- Target group: ${{ steps.tg_health.outputs.target_group_name }}"
             echo "- Target group ARN: ${{ steps.tg_health.outputs.target_group_arn }}"
             echo "- Non-healthy targets: ${{ steps.tg_health.outputs.non_healthy }}"

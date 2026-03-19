@@ -307,6 +307,42 @@ variable "backend_health_check_path" {
   default     = "/actuator/health"
 }
 
+variable "alb_enable_deletion_protection" {
+  description = "Enable deletion protection on backend ALB"
+  type        = bool
+  default     = true
+}
+
+variable "alb_idle_timeout" {
+  description = "ALB idle timeout in seconds"
+  type        = number
+  default     = 60
+}
+
+variable "backend_tg_deregistration_delay" {
+  description = "Target group deregistration delay in seconds"
+  type        = number
+  default     = 60
+}
+
+variable "backend_tg_slow_start" {
+  description = "Target group slow start duration in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "backend_instance_warmup_seconds" {
+  description = "Warmup duration used by ASG instance refresh"
+  type        = number
+  default     = 180
+}
+
+variable "backend_refresh_min_healthy_percentage" {
+  description = "Minimum healthy percentage for ASG rolling refresh"
+  type        = number
+  default     = 100
+}
+
 variable "alb_certificate_arn" {
   description = "ACM certificate ARN for backend HTTPS listener"
   type        = string
