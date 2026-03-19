@@ -286,19 +286,19 @@ variable "backend_ami_id" {
 variable "backend_desired_capacity" {
   description = "Desired instance count in backend ASG"
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "backend_min_size" {
   description = "Minimum backend ASG size"
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "backend_max_size" {
   description = "Maximum backend ASG size"
   type        = number
-  default     = 6
+  default     = 4
 }
 
 variable "backend_health_check_path" {
