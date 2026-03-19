@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Backend Local" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <option name="MAIN_CLASS_NAME" value="com.khaleo.flashcard.FlashcardApplication" />
+    <module name="flashcard-backend" />
+    <option name="PROGRAM_PARAMETERS" value="--server.port=8080" />
+    <envs>
+      <env name="DB_URL" value="jdbc:mysql://localhost:3306/khaleo_flashcard" />
+      <env name="DB_USERNAME" value="khaleo" />
+      <env name="DB_PASSWORD" value="khaleo" />
+      <env name="JWT_SECRET" value="dev-secret-change-me-32-characters-min" />
+      <env name="APP_SECURITY_CORS_ALLOWED_ORIGINS" value="http://localhost:5173,http://127.0.0.1:5173" />
+    </envs>
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
