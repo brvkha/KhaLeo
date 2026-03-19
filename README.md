@@ -26,6 +26,7 @@ Before approving production release:
 - Terraform is the source of truth for AWS deploy contracts and GitHub production environment configuration.
 - CI (`.github/workflows/ci.yml`) runs Terraform format/validate/speculative plan plus backend/frontend quality gates.
 - Deploy workflows must assume AWS role via OIDC and use immutable artifact-by-SHA paths.
+- Backend deploy uses immutable AMI bake (artifact SHA -> AMI -> ASG instance refresh) so replacement EC2 instances always boot with a pre-baked app binary.
 - Runtime secrets are sourced from AWS Secrets Manager (`khaleo/prod/*`) and never committed.
 
 ### Minimum Production Environment Values

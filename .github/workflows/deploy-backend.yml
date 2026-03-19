@@ -21,8 +21,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "workflow_dispatch:" .github/workflows/deploy-backend.yml
-          grep -q "aws ssm send-command" .github/workflows/deploy-backend.yml
-          grep -q "failed_targets" .github/workflows/deploy-backend.yml
+          grep -q "packer build" .github/workflows/deploy-backend.yml
+          grep -q "start-instance-refresh" .github/workflows/deploy-backend.yml
+          grep -q "describe-instance-refreshes" .github/workflows/deploy-backend.yml
 
   deploy:
     needs: workflow-contract
@@ -35,16 +36,13 @@ jobs:
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       ARTIFACT_BUCKET: ${{ secrets.ARTIFACT_BUCKET }}
-      DEPLOY_TARGET_TAG_KEY: ${{ secrets.DEPLOY_TARGET_TAG_KEY }}
-      DEPLOY_TARGET_TAG_VALUE: ${{ secrets.DEPLOY_TARGET_TAG_VALUE }}
-      DEPLOY_TARGET_GROUP_NAME: khaleo-backend-tg
-      SERVICE_NAME: ${{ secrets.DEPLOY_SERVICE_NAME }}
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      BACKEND_ASG_NAME: khaleo-backend-asg
+      DEPLOY_TARGET_GROUP_NAME: khaleo-backend-tg
       DB_SECRET_ID: ${{ vars.DB_SECRET_ID }}
       JWT_SECRET_ID: ${{ vars.JWT_SECRET_ID }}
       SES_SECRET_ID: ${{ vars.SES_SECRET_ID }}
       RUNTIME_ENV_PATH: ${{ vars.RUNTIME_ENV_PATH }}
-      TARGET_JAR_PATH: /opt/khaleo/flashcard-backend/current.jar
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,18 +75,11 @@ jobs:
           set -euo pipefail
           test -n "${AWS_ROLE_TO_ASSUME}"
           test -n "${AWS_REGION}"
+          test -n "${ARTIFACT_BUCKET}"
           test -n "${DB_SECRET_ID}"
           test -n "${JWT_SECRET_ID}"
           test -n "${SES_SECRET_ID}"
           test -n "${RUNTIME_ENV_PATH}"
-
-      - name: Encode deploy script for SSM execution
-        id: deploy_script
-        shell: bash
-        run: |
-          set -euo pipefail
-          SCRIPT_B64=$(base64 -w 0 backend/scripts/deploy-via-ssm.sh)
-          echo "content=${SCRIPT_B64}" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -130,8 +121,157 @@ jobs:
           echo "artifact_key=${ARTIFACT_KEY}" >> "$GITHUB_OUTPUT"
           echo "artifact_uri=s3://${ARTIFACT_BUCKET}/${ARTIFACT_KEY}" >> "$GITHUB_OUTPUT"
 
-      - name: Resolve deployment targets from target group
-        id: targets
+      - name: Set up Packer
+        uses: hashicorp/setup-packer@v3
+
+      - name: Resolve bake subnet
+        id: bake_subnet
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VPC_ID=$(aws ec2 describe-vpcs \
+            --filters "Name=tag:Name,Values=khaleo-vpc" \
+            --query "Vpcs[0].VpcId" \
+            --output text)
+
+          if [[ -z "${VPC_ID}" || "${VPC_ID}" == "None" ]]; then
+            echo "Unable to resolve khaleo-vpc VPC ID." >&2
+            exit 1
+          fi
+
+          SUBNET_ID=$(aws ec2 describe-subnets \
+            --filters "Name=vpc-id,Values=${VPC_ID}" "Name=tag:Tier,Values=public" \
+            --query "Subnets[0].SubnetId" \
+            --output text)
+
+          if [[ -z "${SUBNET_ID}" || "${SUBNET_ID}" == "None" ]]; then
+            echo "Unable to resolve public subnet for AMI bake." >&2
+            exit 1
+          fi
+
+          echo "vpc_id=${VPC_ID}" >> "$GITHUB_OUTPUT"
+          echo "subnet_id=${SUBNET_ID}" >> "$GITHUB_OUTPUT"
+          echo "Resolved AMI bake subnet: ${SUBNET_ID}"
+
+      - name: Bake immutable backend AMI
+        id: bake
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd infra/packer
+          packer init backend.pkr.hcl
+
+          packer build -machine-readable -color=false \
+            -var "aws_region=${AWS_REGION}" \
+            -var "subnet_id=${{ steps.bake_subnet.outputs.subnet_id }}" \
+            -var "app_jar_path=../../backend/target/flashcard-backend-0.1.0-SNAPSHOT.jar" \
+            -var "db_secret_id=${DB_SECRET_ID}" \
+            -var "jwt_secret_id=${JWT_SECRET_ID}" \
+            -var "ses_secret_id=${SES_SECRET_ID}" \
+            -var "runtime_env_path=${RUNTIME_ENV_PATH}" \
+            -var "app_sha=${{ steps.sha.outputs.value }}" \
+            backend.pkr.hcl | tee /tmp/packer-build.log
+
+          AMI_ID=$(awk -F, '/artifact,0,id/ {print $6}' /tmp/packer-build.log | tail -n1 | cut -d: -f2)
+
+          if [[ -z "${AMI_ID}" ]]; then
+            echo "Unable to resolve baked AMI ID from Packer output." >&2
+            exit 1
+          fi
+
+          echo "ami_id=${AMI_ID}" >> "$GITHUB_OUTPUT"
+          echo "Baked immutable AMI: ${AMI_ID}"
+
+      - name: Create launch template version with baked AMI
+        id: launch_template
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          LT_ID=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names "${BACKEND_ASG_NAME}" \
+            --query "AutoScalingGroups[0].LaunchTemplate.LaunchTemplateId" \
+            --output text)
+
+          CURRENT_VERSION=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names "${BACKEND_ASG_NAME}" \
+            --query "AutoScalingGroups[0].LaunchTemplate.Version" \
+            --output text)
+
+          if [[ -z "${LT_ID}" || "${LT_ID}" == "None" ]]; then
+            echo "Unable to resolve launch template from ASG ${BACKEND_ASG_NAME}." >&2
+            exit 1
+          fi
+
+          NEW_VERSION=$(aws ec2 create-launch-template-version \
+            --launch-template-id "${LT_ID}" \
+            --source-version "${CURRENT_VERSION}" \
+            --launch-template-data "{\"ImageId\":\"${{ steps.bake.outputs.ami_id }}\"}" \
+            --query "LaunchTemplateVersion.VersionNumber" \
+            --output text)
+
+          aws autoscaling update-auto-scaling-group \
+            --auto-scaling-group-name "${BACKEND_ASG_NAME}" \
+            --launch-template "LaunchTemplateId=${LT_ID},Version=${NEW_VERSION}"
+
+          echo "launch_template_id=${LT_ID}" >> "$GITHUB_OUTPUT"
+          echo "old_version=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "new_version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Start ASG instance refresh
+        id: refresh
+        shell: bash
+        run: |
+          set -euo pipefail
+          REFRESH_ID=$(aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name "${BACKEND_ASG_NAME}" \
+            --preferences '{"MinHealthyPercentage":50,"InstanceWarmup":180}' \
+            --query "InstanceRefreshId" \
+            --output text)
+          echo "id=${REFRESH_ID}" >> "$GITHUB_OUTPUT"
+          echo "Started instance refresh: ${REFRESH_ID}"
+
+      - name: Wait for instance refresh completion
+        id: refresh_wait
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REFRESH_ID="${{ steps.refresh.outputs.id }}"
+          ATTEMPTS=0
+          MAX_ATTEMPTS=60
+          SLEEP_SECONDS=15
+
+          while [[ ${ATTEMPTS} -lt ${MAX_ATTEMPTS} ]]; do
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name "${BACKEND_ASG_NAME}" \
+              --instance-refresh-ids "${REFRESH_ID}" \
+              --query "InstanceRefreshes[0].Status" \
+              --output text)
+
+            if [[ "${STATUS}" == "Successful" ]]; then
+              echo "final_status=${STATUS}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            if [[ "${STATUS}" == "Failed" || "${STATUS}" == "Cancelled" ]]; then
+              echo "Instance refresh ended with status ${STATUS}." >&2
+              echo "final_status=${STATUS}" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+
+            ATTEMPTS=$((ATTEMPTS + 1))
+            sleep "${SLEEP_SECONDS}"
+          done
+
+          echo "Instance refresh timed out." >&2
+          echo "final_status=Timeout" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      - name: Verify target group health convergence
+        id: tg_health
         shell: bash
         run: |
           set -euo pipefail
@@ -147,245 +287,31 @@ jobs:
             exit 1
           fi
 
-          INSTANCE_IDS=$(aws elbv2 describe-target-health \
-            --target-group-arn "${TG_ARN}" \
-            --query "TargetHealthDescriptions[].Target.Id" \
-            --output text)
-
-          if [[ -z "${INSTANCE_IDS}" ]]; then
-            echo "No instances found in target group ${TARGET_GROUP_NAME}." >&2
-            exit 1
-          fi
-
-          echo "target_group_name=${TARGET_GROUP_NAME}" >> "$GITHUB_OUTPUT"
-          echo "target_group_arn=${TG_ARN}" >> "$GITHUB_OUTPUT"
-          echo "instance_ids=${INSTANCE_IDS}" >> "$GITHUB_OUTPUT"
-          echo "Resolved target group ${TARGET_GROUP_NAME} instances: ${INSTANCE_IDS}"
-
-      - name: Dispatch deployment command to all targets
-        id: dispatch
-        shell: bash
-        run: |
-          set -euo pipefail
-          PARAMS=$(jq -n \
-            --arg script "${{ steps.deploy_script.outputs.content }}" \
-            --arg db "${DB_SECRET_ID}" \
-            --arg jwt "${JWT_SECRET_ID}" \
-            --arg ses "${SES_SECRET_ID}" \
-            --arg env_path "${RUNTIME_ENV_PATH}" \
-            --arg artifact "${{ steps.upload.outputs.artifact_uri }}" \
-            --arg service "${SERVICE_NAME}" \
-            --arg jar "${TARGET_JAR_PATH}" \
-            '{
-              commands: [
-                "echo \($script) | base64 -d | sudo tee /tmp/deploy-via-ssm.sh >/dev/null",
-                "sudo chmod +x /tmp/deploy-via-ssm.sh",
-                "sudo sed -i 's/\\r$//' /tmp/deploy-via-ssm.sh",
-                "sudo DB_SECRET_ID=\($db) JWT_SECRET_ID=\($jwt) SES_SECRET_ID=\($ses) RUNTIME_ENV_PATH=\($env_path) /tmp/deploy-via-ssm.sh \($artifact) \($service) \($jar)"
-              ]
-            }')
-
-          COMMAND_ID=$(aws ssm send-command \
-            --document-name "AWS-RunShellScript" \
-            --comment "KhaLeo backend deploy ${{ steps.sha.outputs.value }}" \
-            --instance-ids ${{ steps.targets.outputs.instance_ids }} \
-            --parameters "$PARAMS" \
-            --query "Command.CommandId" \
-            --output text)
-          echo "command_id=${COMMAND_ID}" >> "$GITHUB_OUTPUT"
-          echo "Dispatched SSM command: ${COMMAND_ID}"
-
-      - name: Poll per-target results and fail on any failed target
-        id: aggregate
-        shell: bash
-        run: |
-          set -euo pipefail
-          COMMAND_ID="${{ steps.dispatch.outputs.command_id }}"
-          ATTEMPTS=0
-          MAX_ATTEMPTS=30
-          SLEEP_SECONDS=10
-
-          while [[ ${ATTEMPTS} -lt ${MAX_ATTEMPTS} ]]; do
-            INCOMPLETE=$(aws ssm list-command-invocations --command-id "${COMMAND_ID}" --details --query "length(CommandInvocations[?Status!='Success' && Status!='Failed' && Status!='TimedOut' && Status!='Cancelled'])" --output text)
-            if [[ "${INCOMPLETE}" == "0" ]]; then
-              break
-            fi
-            ATTEMPTS=$((ATTEMPTS + 1))
-            sleep "${SLEEP_SECONDS}"
-          done
-
-          STATUS_TABLE=$(aws ssm list-command-invocations --command-id "${COMMAND_ID}" --details --query "CommandInvocations[].{instance:InstanceId,status:Status,details:StatusDetails}" --output table)
-          echo "${STATUS_TABLE}"
-
-          FAILED_TARGETS=$(aws ssm list-command-invocations --command-id "${COMMAND_ID}" --details --query "length(CommandInvocations[?Status=='Failed' || Status=='TimedOut' || Status=='Cancelled'])" --output text)
-          TOTAL_TARGETS=$(aws ssm list-command-invocations --command-id "${COMMAND_ID}" --details --query "length(CommandInvocations)" --output text)
-          FAILED_INSTANCE_IDS=$(aws ssm list-command-invocations --command-id "${COMMAND_ID}" --details --query "CommandInvocations[?Status=='Failed' || Status=='TimedOut' || Status=='Cancelled'].InstanceId" --output text)
-
-          {
-            echo "### Deployment Summary"
-            echo "- Artifact SHA: ${{ steps.sha.outputs.value }}"
-            echo "- Artifact URI: ${{ steps.upload.outputs.artifact_uri }}"
-            echo "- SSM Command ID: ${COMMAND_ID}"
-            echo "- Target group: ${{ steps.targets.outputs.target_group_name }}"
-            echo "- Target group ARN: ${{ steps.targets.outputs.target_group_arn }}"
-            echo "- Target instances: ${{ steps.targets.outputs.instance_ids }}"
-            echo "- Total targets: ${TOTAL_TARGETS}"
-            echo "- Failed targets: ${FAILED_TARGETS}"
-            echo "- Environment: production"
-            echo ""
-            echo "\`\`\`"
-            echo "${STATUS_TABLE}"
-            echo "\`\`\`"
-            echo ""
-            echo "### Rollback Guidance"
-            echo "- Re-run this workflow via workflow_dispatch with artifactSha=<known-good-sha>."
-            echo "- Re-run Deploy Frontend with the same artifactSha to keep versions aligned."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          echo "failed_targets=${FAILED_TARGETS}" >> "$GITHUB_OUTPUT"
-          if [[ "${FAILED_TARGETS}" != "0" ]]; then
-            echo "Collecting failed target diagnostics..."
-            for INSTANCE_ID in ${FAILED_INSTANCE_IDS}; do
-              echo "----- ${INSTANCE_ID} STDERR -----"
-              aws ssm get-command-invocation \
-                --command-id "${COMMAND_ID}" \
-                --instance-id "${INSTANCE_ID}" \
-                --query "StandardErrorContent" \
-                --output text || true
-
-              echo "----- ${INSTANCE_ID} STDOUT -----"
-              aws ssm get-command-invocation \
-                --command-id "${COMMAND_ID}" \
-                --instance-id "${INSTANCE_ID}" \
-                --query "StandardOutputContent" \
-                --output text || true
-            done
-
-            echo "One or more deployment targets failed."
-            exit 1
-          fi
-
-      - name: Deploy to newly registered target-group instances
-        id: deploy_additional_targets
-        shell: bash
-        run: |
-          set -euo pipefail
-          TG_ARN="${{ steps.targets.outputs.target_group_arn }}"
-          INITIAL_INSTANCE_IDS="${{ steps.targets.outputs.instance_ids }}"
-
-          mapfile -t INITIAL_ARR < <(tr '\t' '\n' <<< "${INITIAL_INSTANCE_IDS}" | sed '/^$/d')
-
-          CURRENT_INSTANCE_IDS=$(aws elbv2 describe-target-health \
-            --target-group-arn "${TG_ARN}" \
-            --query "TargetHealthDescriptions[].Target.Id" \
-            --output text)
-
-          contains_initial() {
-            local candidate="$1"
-            for existing in "${INITIAL_ARR[@]}"; do
-              if [[ "${existing}" == "${candidate}" ]]; then
-                return 0
-              fi
-            done
-            return 1
-          }
-
-          ADDITIONAL_INSTANCE_IDS=""
-          for INSTANCE_ID in ${CURRENT_INSTANCE_IDS}; do
-            if ! contains_initial "${INSTANCE_ID}"; then
-              ADDITIONAL_INSTANCE_IDS+=" ${INSTANCE_ID}"
-            fi
-          done
-          ADDITIONAL_INSTANCE_IDS="$(xargs <<< "${ADDITIONAL_INSTANCE_IDS}")"
-
-          if [[ -z "${ADDITIONAL_INSTANCE_IDS}" ]]; then
-            echo "No new target-group instances detected after primary deploy."
-            echo "additional_instance_ids=" >> "$GITHUB_OUTPUT"
-            echo "all_instance_ids=${INITIAL_INSTANCE_IDS}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "Detected new target-group instances requiring deploy: ${ADDITIONAL_INSTANCE_IDS}"
-
-          PARAMS=$(jq -n \
-            --arg script "${{ steps.deploy_script.outputs.content }}" \
-            --arg db "${DB_SECRET_ID}" \
-            --arg jwt "${JWT_SECRET_ID}" \
-            --arg ses "${SES_SECRET_ID}" \
-            --arg env_path "${RUNTIME_ENV_PATH}" \
-            --arg artifact "${{ steps.upload.outputs.artifact_uri }}" \
-            --arg service "${SERVICE_NAME}" \
-            --arg jar "${TARGET_JAR_PATH}" \
-            '{
-              commands: [
-                "echo \($script) | base64 -d | sudo tee /tmp/deploy-via-ssm.sh >/dev/null",
-                "sudo chmod +x /tmp/deploy-via-ssm.sh",
-                "sudo sed -i '\''s/\\r$//'\'' /tmp/deploy-via-ssm.sh",
-                "sudo DB_SECRET_ID=\($db) JWT_SECRET_ID=\($jwt) SES_SECRET_ID=\($ses) RUNTIME_ENV_PATH=\($env_path) /tmp/deploy-via-ssm.sh \($artifact) \($service) \($jar)"
-              ]
-            }')
-
-          ADDITIONAL_COMMAND_ID=$(aws ssm send-command \
-            --document-name "AWS-RunShellScript" \
-            --comment "KhaLeo backend deploy additional targets ${{ steps.sha.outputs.value }}" \
-            --instance-ids ${ADDITIONAL_INSTANCE_IDS} \
-            --parameters "${PARAMS}" \
-            --query "Command.CommandId" \
-            --output text)
-
-          ATTEMPTS=0
-          MAX_ATTEMPTS=30
-          SLEEP_SECONDS=10
-          while [[ ${ATTEMPTS} -lt ${MAX_ATTEMPTS} ]]; do
-            INCOMPLETE=$(aws ssm list-command-invocations --command-id "${ADDITIONAL_COMMAND_ID}" --details --query "length(CommandInvocations[?Status!='Success' && Status!='Failed' && Status!='TimedOut' && Status!='Cancelled'])" --output text)
-            if [[ "${INCOMPLETE}" == "0" ]]; then
-              break
-            fi
-            ATTEMPTS=$((ATTEMPTS + 1))
-            sleep "${SLEEP_SECONDS}"
-          done
-
-          ADDITIONAL_FAILED=$(aws ssm list-command-invocations --command-id "${ADDITIONAL_COMMAND_ID}" --details --query "length(CommandInvocations[?Status=='Failed' || Status=='TimedOut' || Status=='Cancelled'])" --output text)
-
-          {
-            echo "### Additional Target Deploy"
-            echo "- Command ID: ${ADDITIONAL_COMMAND_ID}"
-            echo "- Additional instances: ${ADDITIONAL_INSTANCE_IDS}"
-            echo "- Failed additional targets: ${ADDITIONAL_FAILED}"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [[ "${ADDITIONAL_FAILED}" != "0" ]]; then
-            echo "Additional target deployment failed." >&2
-            exit 1
-          fi
-
-          echo "additional_instance_ids=${ADDITIONAL_INSTANCE_IDS}" >> "$GITHUB_OUTPUT"
-          echo "all_instance_ids=${INITIAL_INSTANCE_IDS} ${ADDITIONAL_INSTANCE_IDS}" >> "$GITHUB_OUTPUT"
-
-      - name: Verify target group health convergence
-        id: tg_health
-        shell: bash
-        run: |
-          set -euo pipefail
-          TG_ARN="${{ steps.targets.outputs.target_group_arn }}"
-          DEPLOYED_INSTANCE_IDS="${{ steps.deploy_additional_targets.outputs.all_instance_ids }}"
           ATTEMPTS=0
           MAX_ATTEMPTS=24
           SLEEP_SECONDS=10
 
           check_non_healthy() {
             local non_healthy=0
-            for INSTANCE_ID in ${DEPLOYED_INSTANCE_IDS}; do
-              STATE=$(aws elbv2 describe-target-health \
+            local instance_ids
+
+            instance_ids=$(aws autoscaling describe-auto-scaling-groups \
+              --auto-scaling-group-names "${BACKEND_ASG_NAME}" \
+              --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
+              --output text)
+
+            for instance_id in ${instance_ids}; do
+              state=$(aws elbv2 describe-target-health \
                 --target-group-arn "${TG_ARN}" \
-                --targets "Id=${INSTANCE_ID}" \
+                --targets "Id=${instance_id}" \
                 --query "TargetHealthDescriptions[0].TargetHealth.State" \
                 --output text 2>/dev/null || echo "unknown")
 
-              if [[ "${STATE}" != "healthy" ]]; then
+              if [[ "${state}" != "healthy" ]]; then
                 non_healthy=$((non_healthy + 1))
               fi
             done
+
             echo "${non_healthy}"
           }
 
@@ -409,28 +335,46 @@ jobs:
 
           FINAL_UNHEALTHY_COUNT=$(check_non_healthy)
 
-          {
-            echo "### Target Group Health"
-            echo "- Target group: ${{ steps.targets.outputs.target_group_name }}"
-            echo "- Target group ARN: ${TG_ARN}"
-            echo "- Deployed instances: ${DEPLOYED_INSTANCE_IDS}"
-            echo "- Non-healthy targets: ${FINAL_UNHEALTHY_COUNT}"
-            echo ""
-            echo "\`\`\`"
-            echo "${TG_STATUS_TABLE}"
-            echo "\`\`\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "non_healthy=${FINAL_UNHEALTHY_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "target_group_name=${TARGET_GROUP_NAME}" >> "$GITHUB_OUTPUT"
+          echo "target_group_arn=${TG_ARN}" >> "$GITHUB_OUTPUT"
 
           if [[ "${FINAL_UNHEALTHY_COUNT}" != "0" ]]; then
-            echo "Target group did not converge to healthy after deployment." >&2
+            echo "Target group did not converge to healthy after immutable deploy." >&2
             exit 1
           fi
+
+      - name: Publish deployment summary
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "### Backend Deployment Summary (Immutable AMI)"
+            echo "- Artifact SHA: ${{ steps.sha.outputs.value }}"
+            echo "- Artifact URI: ${{ steps.upload.outputs.artifact_uri }}"
+            echo "- AMI ID: ${{ steps.bake.outputs.ami_id }}"
+            echo "- Launch template ID: ${{ steps.launch_template.outputs.launch_template_id }}"
+            echo "- Launch template version: ${{ steps.launch_template.outputs.old_version }} -> ${{ steps.launch_template.outputs.new_version }}"
+            echo "- Auto Scaling Group: ${BACKEND_ASG_NAME}"
+            echo "- Instance refresh ID: ${{ steps.refresh.outputs.id }}"
+            echo "- Instance refresh status: ${{ steps.refresh_wait.outputs.final_status }}"
+            echo "- Target group: ${{ steps.tg_health.outputs.target_group_name }}"
+            echo "- Target group ARN: ${{ steps.tg_health.outputs.target_group_arn }}"
+            echo "- Non-healthy targets: ${{ steps.tg_health.outputs.non_healthy }}"
+            echo "- Environment: production"
+            echo ""
+            echo "### Rollback Guidance"
+            echo "- Re-run this workflow via workflow_dispatch with artifactSha=<known-good-sha>."
+            echo "- If urgent, update ASG launch template to previous version ${{ steps.launch_template.outputs.old_version }} and start another instance refresh."
+            echo "- Re-run Deploy Frontend with the same artifactSha to keep versions aligned."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Manual rollback reminder
         if: failure()
         run: |
           {
             echo "### Manual Rollback"
-            echo "- Re-run this workflow via workflow_dispatch with artifactSha=<known-good-sha>."
+            echo "- Re-run this workflow via workflow_dispatch with artifactSha=<known-good-sha> to bake and roll out a known-good AMI."
+            echo "- Or revert ASG launch template to version ${{ steps.launch_template.outputs.old_version }} and trigger a new instance refresh."
             echo "- Re-run Deploy Frontend with the same artifactSha for consistency."
           } >> "$GITHUB_STEP_SUMMARY"

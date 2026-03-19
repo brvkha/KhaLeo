@@ -79,7 +79,7 @@ Check IAM trust policy:
 2. Wait for `CI` workflow success.
 3. Confirm CI includes successful Terraform format/validate/plan checks.
 4. Approve deploy in `production` environment.
-5. Verify backend deploy summary reports failed targets = 0.
+5. Verify backend deploy summary reports a baked `AMI ID`, a successful `Instance refresh`, and target-group non-healthy targets = 0.
 6. Verify frontend deploy summary includes CloudFront invalidation ID.
 
 ## 6. Post-Deploy Verification
@@ -108,6 +108,7 @@ Check IAM trust policy:
 
 1. Open GitHub Actions and run `Deploy Backend` via `workflow_dispatch`.
 2. Set input `artifactSha=<known-good-sha>` and execute.
-3. Run `Deploy Frontend` via `workflow_dispatch` with the same `artifactSha`.
-4. Verify backend health endpoint and frontend smoke flow.
-5. Capture both run summaries (SHA, target status, invalidation ID) as rollback evidence.
+3. Confirm backend workflow bakes a known-good AMI and completes ASG instance refresh.
+4. Run `Deploy Frontend` via `workflow_dispatch` with the same `artifactSha`.
+5. Verify backend health endpoint and frontend smoke flow.
+6. Capture both run summaries (SHA, AMI ID, instance refresh ID, invalidation ID) as rollback evidence.

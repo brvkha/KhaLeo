@@ -456,33 +456,21 @@ resource "aws_launch_template" "backend" {
 #!/bin/bash
 set -euo pipefail
 
-# Cài đặt Java 17 và AWS CLI
-dnf update -y
-dnf install -y java-17-amazon-corretto awscli python3
 mkdir -p /opt/khaleo/flashcard-backend
+mkdir -p "$(dirname "${var.runtime_env_path}")"
 
-# Tạo file service (KHÔNG ĐƯỢC THỤT LỀ Ở ĐÂY)
-cat <<EOF > /etc/systemd/system/flashcard-backend.service
-[Unit]
-Description=KhaLeo Backend
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=/opt/khaleo/flashcard-backend
-EnvironmentFile=-/opt/khaleo/flashcard-backend/runtime-secrets.env
-ExecStart=/usr/bin/java -jar /opt/khaleo/flashcard-backend/current.jar
-Restart=always
-RestartSec=5
-SuccessExitStatus=143
-
-[Install]
-WantedBy=multi-user.target
+cat <<EOF > "${var.runtime_env_path}"
+DB_SECRET_ID=${aws_secretsmanager_secret.db_credentials.name}
+JWT_SECRET_ID=${aws_secretsmanager_secret.jwt_secret.name}
+SES_SECRET_ID=${aws_secretsmanager_secret.ses_credentials.name}
+RUNTIME_ENV_PATH=${var.runtime_env_path}
 EOF
 
-# Tải lại cấu hình và bật service chạy ngầm
+chmod 600 "${var.runtime_env_path}"
+
 systemctl daemon-reload
 systemctl enable flashcard-backend
+systemctl restart flashcard-backend || systemctl start flashcard-backend
 EOT
   )
 

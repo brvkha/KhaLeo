@@ -1,11 +1,12 @@
 name: "Terraform Infrastructure Deploy"
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'infra/terraform/**'
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'infra/terraform/**'
+  workflow_dispatch: # Cho phép kích hoạt thủ công từ tab Actions
 
 permissions:
   id-token: write
