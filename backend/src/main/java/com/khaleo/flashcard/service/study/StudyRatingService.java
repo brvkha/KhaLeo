@@ -28,7 +28,7 @@ public class StudyRatingService {
     private final CardLearningStateRepository cardLearningStateRepository;
     private final CardLearningStateUpdateService cardLearningStateUpdateService;
     private final UserRepository userRepository;
-    private final SpacedRepetitionService spacedRepetitionService;
+    private final StudySchedulerService studySchedulerService;
     private final StudyActivityLogPublisher studyActivityLogPublisher;
     private final PersistenceValidationExceptionMapper exceptionMapper;
     private final NewRelicDeckMediaInstrumentation instrumentation;
@@ -61,7 +61,7 @@ public class StudyRatingService {
                                         .card(card)
                                         .build());
 
-                        SpacedRepetitionService.RatingOutcome outcome = spacedRepetitionService.apply(current, request.rating(), now);
+                        SpacedRepetitionService.RatingOutcome outcome = studySchedulerService.apply(current, request.rating(), now);
                         current.setState(outcome.state());
                         current.setIntervalInDays(outcome.intervalInDays());
                         current.setEaseFactor(outcome.easeFactor());

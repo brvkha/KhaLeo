@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
 public class NextCardsService {
 
     private final StudyAccessService studyAccessService;
-    private final StudyDailyQuotaService studyDailyQuotaService;
+    private final StudySessionLimitService studySessionLimitService;
     private final CardLearningStateRepository cardLearningStateRepository;
     private final CardRepository cardRepository;
     private final PersistenceValidationExceptionMapper exceptionMapper;
@@ -70,7 +70,7 @@ public class NextCardsService {
                         List.of(CardLearningStateType.REVIEW, CardLearningStateType.MASTERED),
                         now);
 
-        int newQuota = studyDailyQuotaService.remainingNewCardQuota(userId);
+        int newQuota = studySessionLimitService.remainingNewCardQuota(userId);
         List<Card> newCards = newQuota <= 0
                 ? List.of()
                 : cardRepository.findUnseenCardsInDeck(deckId, userId, PageRequest.of(0, newQuota));

@@ -78,6 +78,30 @@ public class NewRelicDeckMediaInstrumentation {
                 attributes);
     }
 
+    public void recordDiscoveryOutcome(String status, Map<String, Object> attributes) {
+        log.info("event=new_relic_deck_media metric=public_discovery status={} attributes={} count=1",
+                status,
+                attributes);
+    }
+
+    public void recordImportOutcome(String status, Map<String, Object> attributes) {
+        log.info("event=new_relic_deck_media metric=public_import status={} attributes={} count=1",
+                status,
+                attributes);
+    }
+
+    public void recordMergeOutcome(String status, Map<String, Object> attributes) {
+        log.info("event=new_relic_deck_media metric=reimport_merge status={} attributes={} count=1",
+                status,
+                attributes);
+    }
+
+    public void recordMergeFailure(String reason, Map<String, Object> attributes) {
+        log.warn("event=new_relic_deck_media metric=reimport_merge_failure reason={} attributes={} count=1",
+                reason,
+                attributes);
+    }
+
     public void recordAdminObservabilityEvent(String eventName, Map<String, Object> attributes) {
         log.info("event=new_relic_deck_media metric=admin_observability_event eventName={} attributes={} count=1",
                 eventName,

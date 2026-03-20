@@ -108,6 +108,30 @@ public class PersistenceValidationExceptionMapper {
                 "persistence_rejected_deck_not_found");
     }
 
+    public RuntimeException deckNotPublic(UUID deckId) {
+        return logged(
+                PersistenceErrorCode.DECK_NOT_PUBLIC,
+                "Deck is not public: " + deckId,
+                null,
+                "persistence_rejected_deck_not_public");
+    }
+
+    public RuntimeException importLinkNotFound(UUID importLinkId) {
+        return logged(
+                PersistenceErrorCode.IMPORT_LINK_NOT_FOUND,
+                "Import link not found: " + importLinkId,
+                null,
+                "persistence_rejected_import_link_not_found");
+    }
+
+    public RuntimeException invalidConflictResolutionChoice(String choice) {
+        return logged(
+                PersistenceErrorCode.INVALID_CONFLICT_RESOLUTION_CHOICE,
+                "Invalid conflict resolution choice: " + choice,
+                null,
+                "persistence_rejected_invalid_conflict_resolution_choice");
+    }
+
     public RuntimeException cardNotFound(UUID cardId) {
         return logged(
                 PersistenceErrorCode.CARD_NOT_FOUND,

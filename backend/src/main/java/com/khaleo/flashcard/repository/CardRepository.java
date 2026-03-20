@@ -14,6 +14,8 @@ public interface CardRepository extends JpaRepository<Card, UUID> {
 
     List<Card> findByDeckId(UUID deckId);
 
+    long countByDeckId(UUID deckId);
+
     Page<Card> findByDeckId(UUID deckId, Pageable pageable);
 
     @Query("""
