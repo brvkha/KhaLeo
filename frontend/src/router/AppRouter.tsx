@@ -3,8 +3,9 @@ import { Layout } from '../components/Layout'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { DecksPage } from '../features/decks/DecksPage'
-import { CardsPage } from '../features/cards/CardsPage'
-import { StudyPage } from '../features/study/StudyPage'
+import { StudyWorkspacePage } from '../features/study-workspace/StudyWorkspacePage'
+import { StudySessionPage } from '../features/study-session/StudySessionPage'
+import { CardsWorkspacePage } from '../features/cards-workspace/CardsWorkspacePage'
 import { ProfilePage } from '../features/profile/ProfilePage'
 import { RequireAdmin, RequireAuth } from './guards'
 import { AdminDashboardPage } from '../features/admin/dashboard/AdminDashboardPage'
@@ -38,12 +39,13 @@ export function AppRouter() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/blocked" element={<BlockedPage />} />
+        <Route path="/decks" element={<DecksPage />} />
 
         <Route element={<RequireAuth />}>
           <Route index element={<HomePage />} />
-          <Route path="/decks" element={<DecksPage />} />
-          <Route path="/cards" element={<CardsPage />} />
-          <Route path="/study" element={<StudyPage />} />
+          <Route path="/cards" element={<CardsWorkspacePage />} />
+          <Route path="/study" element={<StudyWorkspacePage />} />
+          <Route path="/study/session/:deckId" element={<StudySessionPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
 

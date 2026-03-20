@@ -396,7 +396,7 @@ resource "aws_lb_target_group" "backend" {
   vpc_id                        = aws_vpc.main.id
   target_type                   = "instance"
   deregistration_delay          = var.backend_tg_deregistration_delay
-  load_balancing_algorithm_type = "least_outstanding_requests"
+  load_balancing_algorithm_type = "round_robin"
   slow_start                    = var.backend_tg_slow_start
 
   health_check {

@@ -39,6 +39,14 @@ Notes:
 
 - Playwright config is in `playwright.config.ts`.
 - Smoke specs are in `tests/e2e/smoke.spec.ts`.
+- Feature 008 flow spec is in `tests/e2e/public-discovery-private-study.e2e.ts`.
+
+## Discovery Workspace Session Flow
+
+- `Decks` tab is guest-readable and lists only public decks.
+- `Import to Study` requires sign-in; after auth it imports into learner private workspace.
+- `Study` tab lists only private decks and links each deck to `Start session`.
+- `Study session` route (`/study/session/:deckId`) runs two-sided flashcard flow with reveal and Again/Hard/Good/Easy ratings.
 
 ## Testing Layers
 

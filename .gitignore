@@ -15,7 +15,9 @@ coverage/
 
 # Terraform
 .terraform/
+*.tfstate
 *.tfstate.*
+*.tfvars
 .terraform.lock.hcl
 
 # Logs and runtime

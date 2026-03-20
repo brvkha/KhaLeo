@@ -1,0 +1,592 @@
+openapi: 3.0.3
+info:
+  title: KhaLeo Public Deck Discovery and Clone API
+  version: 0.1.0
+  description: |
+    Contracts for public deck discovery, authenticated import, re-import merge,
+    and merge conflict resolution for learner private copies.
+servers:
+  - url: /api
+
+tags:
+  - name: Discovery
+  - name: Import
+  - name: Merge
+  - name: StudySession
+
+paths:
+  /public/decks:
+    get:
+      tags: [Discovery]
+      summary: List public decks for discovery
+      description: Guest-readable endpoint with deterministic pagination.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public deck page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicDeckPageResponse'
+        '400':
+          description: Invalid pagination or query params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /public/decks/{deckId}:
+    get:
+      tags: [Discovery]
+      summary: Get public deck detail
+      parameters:
+        - in: path
+          name: deckId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Public deck detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicDeckDetailResponse'
+        '404':
+          description: Deck not found or not public
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /public/decks/{deckId}/import:
+    post:
+      tags: [Import]
+      summary: Import a public deck into learner private workspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: deckId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Import created or merged target returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Source deck not found or not public
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /private/decks/import-links/{importLinkId}/reimport:
+    post:
+      tags: [Merge]
+      summary: Re-import from source deck into existing private copy
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: importLinkId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Merge completed or conflicts generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReimportResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Ownership required for target private deck
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Import link not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /private/decks/import-links/{importLinkId}/conflicts:
+    get:
+      tags: [Merge]
+      summary: List unresolved conflicts for an import link
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: importLinkId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conflict list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictListResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Ownership required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /private/decks/import-links/{importLinkId}/conflicts/{conflictId}/resolve:
+    post:
+      tags: [Merge]
+      summary: Resolve one merge conflict with local or cloud choice
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: importLinkId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: conflictId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveConflictRequest'
+      responses:
+        '200':
+          description: Conflict resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveConflictResponse'
+        '400':
+          description: Invalid resolution choice
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Ownership required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Import link or conflict not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /study-session/decks/{deckId}/next-cards:
+    get:
+      tags: [StudySession]
+      summary: List next study cards for a private deck session
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: deckId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: continuationToken
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Study queue page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NextCardsPageResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Ownership/verification required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /study-session/cards/{cardId}/rate:
+    post:
+      tags: [StudySession]
+      summary: Submit card rating in active study session
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: cardId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateCardRequest'
+      responses:
+        '200':
+          description: Rating accepted and next scheduling state calculated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateCardResponse'
+        '400':
+          description: Invalid rating payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Ownership/verification required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PublicDeckSummary:
+      type: object
+      required: [id, name, ownerName, cardCount, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ownerName:
+          type: string
+        description:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        cardCount:
+          type: integer
+          minimum: 0
+        updatedAt:
+          type: string
+          format: date-time
+
+    PublicDeckPageResponse:
+      type: object
+      required: [items, page, size, totalElements, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicDeckSummary'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    PublicDeckDetailResponse:
+      type: object
+      required: [id, name, ownerName, cardCount, cardsPreview]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        ownerName:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        cardCount:
+          type: integer
+        cardsPreview:
+          type: array
+          items:
+            type: object
+            required: [id, frontText]
+            properties:
+              id:
+                type: string
+                format: uuid
+              frontText:
+                type: string
+
+    ImportResponse:
+      type: object
+      required: [importLinkId, sourceDeckId, targetPrivateDeckId, status]
+      properties:
+        importLinkId:
+          type: string
+          format: uuid
+        sourceDeckId:
+          type: string
+          format: uuid
+        targetPrivateDeckId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [SUCCESS, CONFLICT_REQUIRED]
+        conflictsCount:
+          type: integer
+          minimum: 0
+
+    ReimportResponse:
+      type: object
+      required: [importLinkId, status, conflictsCount]
+      properties:
+        importLinkId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [SUCCESS, CONFLICT_REQUIRED, FAILED]
+        conflictsCount:
+          type: integer
+          minimum: 0
+
+    ConflictItem:
+      type: object
+      required: [conflictId, scope, targetEntityId, fieldPath, localValue, cloudValue]
+      properties:
+        conflictId:
+          type: string
+          format: uuid
+        scope:
+          type: string
+          enum: [DECK_FIELD, CARD_ITEM, MEDIA_REF]
+        targetEntityId:
+          type: string
+        fieldPath:
+          type: string
+        localValue:
+          nullable: true
+        cloudValue:
+          nullable: true
+
+    ConflictListResponse:
+      type: object
+      required: [importLinkId, unresolvedCount, items]
+      properties:
+        importLinkId:
+          type: string
+          format: uuid
+        unresolvedCount:
+          type: integer
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConflictItem'
+
+    ResolveConflictRequest:
+      type: object
+      required: [choice]
+      properties:
+        choice:
+          type: string
+          enum: [LOCAL, CLOUD]
+
+    ResolveConflictResponse:
+      type: object
+      required: [importLinkId, conflictId, choice, remainingConflicts]
+      properties:
+        importLinkId:
+          type: string
+          format: uuid
+        conflictId:
+          type: string
+          format: uuid
+        choice:
+          type: string
+          enum: [LOCAL, CLOUD]
+        remainingConflicts:
+          type: integer
+          minimum: 0
+
+    StudyCardSummary:
+      type: object
+      required: [cardId, deckId, frontText, backText, state, sourceTier]
+      properties:
+        cardId:
+          type: string
+          format: uuid
+        deckId:
+          type: string
+          format: uuid
+        frontText:
+          type: string
+        backText:
+          type: string
+        state:
+          type: string
+          enum: [NEW, LEARNING, REVIEW, MASTERED]
+        nextReviewDate:
+          type: string
+          format: date-time
+          nullable: true
+        sourceTier:
+          type: string
+
+    NextCardsPageResponse:
+      type: object
+      required: [items, hasMore]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudyCardSummary'
+        nextContinuationToken:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+
+    RateCardRequest:
+      type: object
+      required: [rating, timeSpentMs]
+      properties:
+        rating:
+          type: string
+          enum: [AGAIN, HARD, GOOD, EASY]
+        timeSpentMs:
+          type: integer
+          minimum: 0
+
+    RateCardResponse:
+      type: object
+      required: [cardId, state, nextReviewAt, newInterval, newEaseFactor]
+      properties:
+        cardId:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [NEW, LEARNING, REVIEW, MASTERED]
+        nextReviewAt:
+          type: string
+          format: date-time
+        newInterval:
+          type: integer
+        newEaseFactor:
+          type: number
+          format: double
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - DISCOVERY_IMPORT_AUTH_REQUIRED
+            - DECK_NOT_FOUND
+            - DECK_NOT_PUBLIC
+            - PRIVATE_DECK_OWNERSHIP_REQUIRED
+            - IMPORT_LINK_NOT_FOUND
+            - MERGE_CONFLICTS_PENDING
+            - INVALID_CONFLICT_RESOLUTION_CHOICE
+            - INVALID_PAGINATION
+            - AUTHORIZATION_DENIED
+            - CARD_NOT_FOUND
+        message:
+          type: string

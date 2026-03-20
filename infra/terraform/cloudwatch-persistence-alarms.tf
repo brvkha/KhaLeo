@@ -92,3 +92,79 @@ resource "aws_cloudwatch_metric_alarm" "deployment_command_failure_high" {
 
   tags = var.common_tags
 }
+
+resource "aws_cloudwatch_metric_alarm" "public_discovery_error_rate_high" {
+  alarm_name          = "khaleo-public-discovery-error-rate-high"
+  alarm_description   = "High error rate in public discovery path"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  threshold           = 3
+  metric_name         = "PublicDiscoveryErrors"
+  namespace           = "KhaLeo/Backend"
+  period              = 60
+  statistic           = "Sum"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Service = "flashcard-backend"
+  }
+
+  tags = var.common_tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "public_import_error_rate_high" {
+  alarm_name          = "khaleo-public-import-error-rate-high"
+  alarm_description   = "High error rate in public import path"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  threshold           = 3
+  metric_name         = "PublicImportErrors"
+  namespace           = "KhaLeo/Backend"
+  period              = 60
+  statistic           = "Sum"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Service = "flashcard-backend"
+  }
+
+  tags = var.common_tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "reimport_merge_error_rate_high" {
+  alarm_name          = "khaleo-reimport-merge-error-rate-high"
+  alarm_description   = "High error rate in re-import merge path"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  threshold           = 3
+  metric_name         = "ReimportMergeErrors"
+  namespace           = "KhaLeo/Backend"
+  period              = 60
+  statistic           = "Sum"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Service = "flashcard-backend"
+  }
+
+  tags = var.common_tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "study_rating_error_rate_high" {
+  alarm_name          = "khaleo-study-rating-error-rate-high"
+  alarm_description   = "High error rate in study session rating path"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  threshold           = 5
+  metric_name         = "StudyRatingErrors"
+  namespace           = "KhaLeo/Backend"
+  period              = 60
+  statistic           = "Sum"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Service = "flashcard-backend"
+  }
+
+  tags = var.common_tags
+}
