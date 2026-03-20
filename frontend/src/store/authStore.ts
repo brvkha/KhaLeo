@@ -1,68 +1,56 @@
 import { create } from 'zustand'
 import type { User } from '../types'
+import { getClaimsFromAccessToken, loginWithPassword, logoutWithRefreshToken, registerWithPassword } from '../services/authApi'
+import { persistAuthSession, readAuthSession } from '../services/authSession'
 
 type AuthState = {
   currentUser: User | null
-  login: (email: string) => void
-  register: (email: string) => void
-  logout: () => void
+  login: (email: string, password: string) => Promise<void>
+  register: (email: string, password: string) => Promise<void>
+  logout: () => Promise<void>
   bootstrap: () => void
   banUser: (email: string) => void
 }
 
-const STORAGE_KEY = 'khaleo-user'
-
-const readStoredUser = (): User | null => {
-  const raw = localStorage.getItem(STORAGE_KEY)
-  if (!raw) {
-    return null
-  }
-  try {
-    return JSON.parse(raw) as User
-  } catch {
-    return null
-  }
-}
-
-const persistUser = (user: User | null): void => {
-  if (user) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
-    return
-  }
-  localStorage.removeItem(STORAGE_KEY)
-}
-
 export const useAuthStore = create<AuthState>((set) => ({
   currentUser: null,
-  login: (email) => {
-    const role = email.includes('admin') ? 'ADMIN' : 'USER'
+  login: async (email, password) => {
+    const loginResponse = await loginWithPassword(email, password)
+    const claims = getClaimsFromAccessToken(loginResponse.accessToken)
     const user: User = {
-      id: crypto.randomUUID(),
-      email,
-      role,
+      id: claims.userId,
+      email: email.trim().toLowerCase(),
+      role: claims.role,
       verified: true,
       banned: false,
     }
-    persistUser(user)
+
+    persistAuthSession({
+      currentUser: user,
+      accessToken: loginResponse.accessToken,
+      refreshToken: loginResponse.refreshToken,
+    })
+
     set({ currentUser: user })
   },
-  register: (email) => {
-    const user: User = {
-      id: crypto.randomUUID(),
-      email,
-      role: 'USER',
-      verified: true,
-      banned: false,
+  register: async (email, password) => {
+    await registerWithPassword(email, password)
+  },
+  logout: async () => {
+    const session = readAuthSession()
+    if (session?.refreshToken) {
+      try {
+        await logoutWithRefreshToken(session.refreshToken)
+      } catch {
+        // Local logout should still proceed if remote token revocation fails.
+      }
     }
-    persistUser(user)
-    set({ currentUser: user })
-  },
-  logout: () => {
-    persistUser(null)
+
+    persistAuthSession(null)
     set({ currentUser: null })
   },
   bootstrap: () => {
-    set({ currentUser: readStoredUser() })
+    set({ currentUser: readAuthSession()?.currentUser ?? null })
   },
   banUser: (email) => {
     set((state) => {
@@ -70,7 +58,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         return state
       }
       const next = { ...state.currentUser, banned: true }
-      persistUser(next)
+      const session = readAuthSession()
+      if (session) {
+        persistAuthSession({
+          ...session,
+          currentUser: next,
+        })
+      }
       return { currentUser: next }
     })
   },

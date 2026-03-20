@@ -9,7 +9,7 @@
 
 ### Session 2026-03-16
 
-- Q: What is card read access for public decks? → A: Anyone can read cards in public decks; private deck cards are readable only by owner/admin.
+- Q: What is card read access for public decks? → A: Guest can only browse public deck catalog in /decks discovery; deck/card content access requires authenticated JWT and private content remains owner/admin only.
 - Q: What is the upload URL expiration window? → A: 5 minutes.
 - Q: How should deck card search matching work? → A: Exact vocabulary is case-insensitive exact; front/back search is case-insensitive contains.
 - Q: How should uploaded media be deleted? → A: Delete only when no deck/card references remain.
@@ -30,7 +30,7 @@ A signed-in learner can create, view, update, and delete decks, with controls th
 1. **Given** a signed-in learner provides valid deck metadata, **When** they create a deck, **Then** the deck is saved with the learner as owner and the chosen visibility setting.
 2. **Given** multiple decks with mixed ownership and visibility, **When** a user lists decks with filters, **Then** results match requested visibility/owner criteria and are returned in paginated form.
 3. **Given** a deck owned by User A, **When** User B who is neither owner nor admin attempts update or delete, **Then** the request is denied and the deck remains unchanged.
-4. **Given** a public deck with cards, **When** an unauthenticated user reads card content for that deck, **Then** access is allowed, while private deck cards remain restricted to owner or admin.
+4. **Given** a guest user opens deck discovery, **When** they attempt to access deck/card content or any non-discovery route, **Then** the system redirects to sign-in and requires authenticated JWT before content is returned.
 
 ---
 
@@ -78,7 +78,7 @@ A user can request short-lived upload authorization for allowed media files, upl
 ### Constitutional Impact *(mandatory)*
 
 - **Algorithm Fidelity**: No change to SM-2 scheduling math or card-state transition rules. User-initiated deck deletion removes related learning-state records by design, but does not alter scheduling logic for remaining records.
-- **Security Impact**: Introduces ownership/admin authorization checks for deck/card mutations, enforces direct-upload authorization for media, restricts accepted media type and size, and adds per-user request throttling on media authorization.
+- **Security Impact**: Enforces a strict access boundary where only public deck discovery is guest-readable; all deck/card content and non-discovery operations require authenticated JWT, while mutation paths continue owner/admin authorization, media policy, and per-user rate limiting.
 - **Observability Impact**: Requires audit-friendly logs and operational metrics for deck/card create-update-delete, authorization denials, media upload authorization issuance, validation failures, rate-limit rejections, and expired authorization usage.
 - **Infrastructure Impact**: Uses object storage upload authorization capability and associated access policy controls; no change to deployment topology is required.
 
@@ -87,7 +87,7 @@ A user can request short-lived upload authorization for allowed media files, upl
 ### Functional Requirements
 
 - **FR-001**: System MUST allow signed-in users to create decks with name, description, tags, and visibility.
-- **FR-002**: System MUST allow users to view deck details and card content based on visibility and access rules: anyone can read cards in public decks, while private deck cards are readable only by the owner or an admin.
+- **FR-002**: System MUST allow guest access only for public deck discovery listing/details and MUST require authenticated JWT for deck details, card content access, and all non-discovery deck/card endpoints.
 - **FR-003**: System MUST allow deck owners and admins to update deck metadata and MUST deny updates from unauthorized users.
 - **FR-004**: System MUST allow deck owners and admins to delete decks and MUST remove all cards and learning-state records associated with the deleted deck.
 - **FR-005**: System MUST allow deck owners and admins to create, update, and delete cards in their decks and MUST deny these actions for unauthorized users.

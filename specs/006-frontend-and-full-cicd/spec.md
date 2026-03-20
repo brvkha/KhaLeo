@@ -21,6 +21,12 @@ Complete the product by delivering:
 - Q: Where should runtime secrets be stored and retrieved from? -> A: Use AWS Secrets Manager for runtime secrets.
  - Q: On deployment failure, should the pipeline auto-rollback or require manual rollback? -> A: Do not auto-rollback; mark run failed and require manual rollback.
 
+### Session 2026-03-20
+
+- Q: Public route policy for app entry and decks discovery? -> A: Only `/decks` is public; all other frontend routes require authenticated session.
+- Q: What happens when guest clicks deck action from `/decks`? -> A: Guest is redirected to login with return target, then returned to intended page after successful login.
+- Q: What baseline test data is required? -> A: Provide seeded users/decks/cards dataset and fixed sample login accounts for manual and E2E verification.
+
 ## User Scenarios & Testing
 
 ### User Story 1 - Study Experience on Web (Priority: P1)
@@ -32,6 +38,7 @@ As a user, I can sign in, manage decks/cards, and run study sessions in a mobile
 **Acceptance Scenarios**:
 
 1. **Given** a registered and verified user, **When** they log in, **Then** the app stores auth state securely and routes to the study dashboard.
+2. **Given** a guest opens any route except `/decks`, **When** route guard evaluates access, **Then** the user is redirected to login and original target is preserved as return path.
 2. **Given** an authenticated user, **When** they CRUD decks/cards and upload media, **Then** all actions are completed via backend APIs and S3 presigned uploads.
 3. **Given** a due card, **When** the user rates it (`Again`, `Hard`, `Good`, `Easy`), **Then** the UI immediately reflects next-card behavior and updated counters.
 
@@ -85,6 +92,11 @@ As a release owner, I can push to `main` and have frontend and backend automatic
  - **FR-013**: Runtime secrets and instance-level secrets SHOULD be stored in AWS Secrets Manager and retrieved by deployed instances via IAM role.
  - **FR-014**: CI/CD MUST not perform automatic rollbacks on partial deployment failures; runs should be marked failed and require manual rollback via documented procedures.
  - **FR-015**: Deployments to production MUST require GitHub Environment approval after CI success.
+- **FR-016**: Frontend route policy MUST allow unauthenticated access only to `/decks`; all other application routes MUST require authenticated user state.
+- **FR-017**: If an unauthenticated user accesses a protected route, frontend MUST redirect to login and preserve `returnTo` so successful login navigates back to intended route.
+- **FR-018**: When a guest initiates deck action from `/decks` that requires authentication (e.g., import/copy/open private workspace), frontend MUST redirect to login with return target and resume action context after login.
+- **FR-019**: Backend API policy for frontend integration MUST allow guest access only to `/api/v1/auth/**` and `GET /api/v1/public/decks/**` (plus health/docs endpoints), while all other `/api/v1/**` endpoints require JWT authentication.
+- **FR-020**: Project MUST provide reusable seeded test data containing at least 6 users, 12 decks (public + private), and 120 cards, together with documented sample login accounts for QA/E2E runs.
 
 Note: Production runtime secrets (DB credentials, JWT_SECRET, SES credentials) should be provisioned into AWS Secrets Manager and referenced by workflows and instances; deployment workflows should use short-lived role assumption via OIDC.
 
@@ -123,3 +135,5 @@ Note: Production runtime secrets (DB credentials, JWT_SECRET, SES credentials) s
 - **SC-003**: 100% of pushes to `main` trigger CI/CD workflows automatically.
 - **SC-004**: At least 99% of successful runs deploy frontend and backend without manual intervention.
 - **SC-005**: 100% of failed runs report enough detail to identify the failed stage and target.
+- **SC-006**: 100% of guest attempts to open protected frontend routes are redirected to login with a valid return target.
+- **SC-007**: 100% of documented sample accounts can successfully sign in during smoke testing, and seeded data is available for deck/card workflows without manual data entry.

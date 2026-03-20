@@ -70,6 +70,8 @@ Grant the IAM role assumed by GitHub Actions via OIDC these capabilities:
 4. Confirm CloudFront invalidation completes.
 5. Confirm backend deploy publishes commit-SHA jar and runs SSM rollout.
 6. Confirm application health endpoint returns success.
+7. Run route-policy smoke checks with fixture accounts from `../008-public-deck-clone/test-data.md`.
+8. Verify guest can open only `/decks`, and protected routes redirect to login with return target.
 
 ### 7.1 Latest Validation Record
 

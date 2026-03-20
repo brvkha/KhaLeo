@@ -58,7 +58,7 @@ export function DecksDiscoveryPage() {
               onClick={() => {
                 if (!currentUser) {
                   setError('Please sign in to import decks')
-                  navigate('/login')
+                  navigate('/login?returnTo=%2Fdecks')
                   return
                 }
                 void importPublicDeck(deck.id).catch((err) => {

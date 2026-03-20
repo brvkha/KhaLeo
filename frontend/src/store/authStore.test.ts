@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from './authStore'
+import { persistAuthSession } from '../services/authSession'
 
 describe('auth store', () => {
   beforeEach(() => {
     localStorage.clear()
+    persistAuthSession(null)
     useAuthStore.setState({
       currentUser: null,
       login: useAuthStore.getState().login,
@@ -14,22 +16,25 @@ describe('auth store', () => {
     })
   })
 
-  it('logs in admin based on email and logs out', () => {
-    useAuthStore.getState().login('admin@khaleo.app')
-    expect(useAuthStore.getState().currentUser?.role).toBe('ADMIN')
+  it('bootstraps persisted auth session', () => {
+    persistAuthSession({
+      currentUser: {
+        id: 'u1',
+        email: 'khaleo@khaleo.app',
+        role: 'USER',
+        verified: true,
+        banned: false,
+      },
+      accessToken: 'token',
+      refreshToken: 'refresh',
+    })
 
-    useAuthStore.getState().logout()
-    expect(useAuthStore.getState().currentUser).toBeNull()
-  })
-
-  it('persists and bootstraps user session', () => {
-    useAuthStore.getState().register('user@khaleo.app')
     useAuthStore.setState({
       ...useAuthStore.getState(),
       currentUser: null,
     })
 
     useAuthStore.getState().bootstrap()
-    expect(useAuthStore.getState().currentUser?.email).toBe('user@khaleo.app')
+    expect(useAuthStore.getState().currentUser?.email).toBe('khaleo@khaleo.app')
   })
 })

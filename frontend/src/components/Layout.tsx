@@ -25,7 +25,9 @@ export function Layout() {
                 <span className="text-sm text-slate-600">{currentUser.email}</span>
                 <button
                   className="rounded bg-slate-900 px-3 py-1 text-white"
-                  onClick={logout}
+                  onClick={() => {
+                    void logout()
+                  }}
                 >
                   Logout
                 </button>

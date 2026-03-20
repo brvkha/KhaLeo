@@ -13,6 +13,8 @@
 - Q: Guest/User được phép gì ở tab Decks public? -> A: Guest được xem deck public; chỉ user đăng nhập mới import/copy vào Study.
 - Q: Nếu user import lại cùng source deck thì xử lý sao? -> A: Merge source vào bản private cũ; giữ chỉnh sửa local nếu không xung đột.
 - Q: Khi merge re-import có xung đột giữa local và cloud thì ưu tiên sao? -> A: Cho người dùng chọn giữ local hoặc dùng dữ liệu cloud.
+- Q: Route access policy khi vào app? -> A: Chỉ route `/decks` là công khai cho guest; mọi route khác bắt buộc đăng nhập.
+- Q: Guest click vào hành động deck trong `/decks` thì xử lý sao? -> A: Chuyển về login kèm `returnTo`, đăng nhập xong quay lại đúng ngữ cảnh deck.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -43,7 +45,7 @@ As a learner, I can browse only public decks in the discovery tab and import one
 **Acceptance Scenarios**:
 
 1. **Given** multiple decks with mixed visibility, **When** a guest or learner opens the discovery tab, **Then** only public decks are listed.
-2. **Given** a selected public deck, **When** a guest attempts import/copy, **Then** the request is blocked until authentication is completed.
+2. **Given** a selected public deck, **When** a guest attempts import/copy/open protected deck action, **Then** the user is redirected to login with `returnTo` and the request remains blocked until authentication succeeds.
 3. **Given** a selected public deck and an authenticated learner, **When** the learner chooses import/copy, **Then** the system creates a new private deck owned by that learner with copied card content.
 4. **Given** a public deck has later edits by its original owner, **When** the learner explicitly re-imports, **Then** the system merges source updates into the existing private copy while preserving local learner edits when no conflicts exist.
 5. **Given** a re-import merge has conflicts between local private edits and source cloud data, **When** the conflict step is shown, **Then** the learner can explicitly choose whether to keep local values or apply cloud values for each conflicted unit.
@@ -97,6 +99,8 @@ As a learner, I can start a focused study session that shows two-sided cards and
 - **FR-016**: Public discovery read access MUST allow both guests and authenticated users, and MUST NOT expose private decks.
 - **FR-017**: Import/copy action from public discovery MUST require an authenticated user session.
 - **FR-020**: Import/copy and study-session actions MUST require an authenticated and email-verified account.
+- **FR-022**: At application route level, only `/decks` discovery path is guest-accessible; all other study/cards/profile/admin paths MUST require authenticated session and JWT-backed API access.
+- **FR-023**: Protected-route redirects and guest deck-action redirects MUST preserve `returnTo` target and return users to intended destination after successful login.
 - **FR-002**: System MUST provide a personal study/cards workspace that lists only private decks owned by the acting learner.
 - **FR-003**: System MUST allow learners to create, update, delete, and search only within their own private decks.
 - **FR-004**: System MUST deny private-workspace CRUD/search mutations for decks not owned by the acting learner.

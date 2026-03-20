@@ -19,6 +19,53 @@ mvn "-Dtest=StudyTimingMappingUnitTest,StudySessionFlowIntegrationTest,StudySche
 mvn "-Dtest=FeatureTelemetryIntegrationTest,FeaturePerformanceValidationIT" test
 ```
 
+## Local/Dev Seed Data
+
+Enable deterministic seed users/decks/cards for local testing:
+
+```powershell
+cd backend
+./scripts/run-local-with-seed.ps1
+```
+
+Or run manually:
+
+```powershell
+cd backend
+$env:APP_SEED_LOCAL_DEV_ENABLED = "true"
+$env:APP_SEED_LOCAL_DEV_PASSWORD = "khaleo"
+mvn spring-boot:run
+```
+
+Seeded login accounts (password default: `khaleo`):
+
+- `admin@khaleo.app`
+- `khaleo@khaleo.app`
+- `learner+01@khaleo.app`
+- `learner+02@khaleo.app`
+- `learner+03@khaleo.app`
+- `learner+04@khaleo.app`
+- `learner+05@khaleo.app`
+- `learner+blocked@khaleo.app` (banned)
+- `learner+unverified@khaleo.app` (unverified)
+
+Seed baseline:
+
+- 8 users
+- 12 decks (6 public + 6 private)
+- 120 cards (10 cards/deck)
+
+## Keep Local Database Between Restarts
+
+Use Docker Compose local MySQL service; data is persisted in Docker volume `khaleo_mysql_data`:
+
+```powershell
+cd backend
+./scripts/start-local-db.ps1
+```
+
+Do not remove the volume if you want to keep data. Avoid `docker compose down -v`.
+
 ## Feature 008 Verification Sequence
 
 1. Run contract tests for public discovery/import and conflict endpoints.

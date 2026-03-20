@@ -6,6 +6,7 @@
 - Node.js 20+ for frontend changes.
 - Existing auth flow available for guest/user role path checks.
 - Local database/test environment prepared per project standard setup.
+- Seed fixture from `test-data.md` is loaded (accounts, 12 decks, 120 cards).
 
 ## 2. Implement Discovery and Workspace Segmentation
 
@@ -56,6 +57,7 @@
 2. Validate auth boundaries:
    - guest can view public decks
    - guest cannot import
+   - guest can access only `/decks`; all other routes redirect to login with `returnTo`
    - private workspace mutations remain owner-only.
 
 ## 7. Verify with Targeted Tests
@@ -94,6 +96,9 @@ npm run test:e2e
 6. Start study session:
    - Confirm two-sided cards.
    - Confirm first-step timing for new cards matches 1m/6m/10m/1d mapping.
+7. Route/auth policy checks:
+   - Open `/study` directly as guest and verify redirect to login preserves target.
+   - Sign in and verify app returns to preserved target.
 
 ## 9. Evidence to Capture
 

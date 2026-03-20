@@ -40,8 +40,8 @@ public class SecurityConfig {
                         .accessDeniedHandler(authExceptionHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/decks/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/decks/**").permitAll()
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/**").authenticated()

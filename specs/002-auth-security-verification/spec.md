@@ -60,6 +60,7 @@ A user who forgets a password can reset it through a time-limited email flow, wh
 - A user requests multiple verification or reset messages in a short period; only the latest active token should be accepted.
 - A lockout period expires while a user is retrying sign-in; the next valid sign-in should succeed and reset failed-attempt counters.
 - Password reset is requested for a non-existent email; response should not reveal whether the account exists.
+- A guest opens a protected application route directly; system should force login and preserve return target after successful authentication.
 
 ### Constitutional Impact *(mandatory)*
 
@@ -86,6 +87,9 @@ A user who forgets a password can reset it through a time-limited email flow, wh
 - **FR-012**: Every list-producing API MUST define pagination behavior or explicitly state why no list endpoint exists for this feature. This feature introduces no list-producing endpoints.
 - **FR-013**: System MUST define required observability outputs for registration, verification, sign-in failures, lockouts, password reset, refresh, and sign-out revocation.
 - **FR-014**: System MUST preserve existing SM-2 scheduling fidelity, card-state transitions, and account-level daily learning limits without modification.
+- **FR-015**: System MUST enforce that only `/decks` discovery route is publicly accessible in the web app, while all other application routes require authenticated session.
+- **FR-016**: System MUST require JWT authentication for all protected `/api/v1/**` endpoints except explicitly public authentication endpoints and public deck discovery endpoints.
+- **FR-017**: Authentication flow MUST support safe post-login return-to-target behavior for users redirected from protected routes.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -116,3 +120,4 @@ A user who forgets a password can reset it through a time-limited email flow, wh
 - **SC-004**: At least 90% of users who request password reset complete reset successfully within 15 minutes when using valid tokens.
 - **SC-005**: 100% of revoked or expired refresh credentials are rejected on refresh attempts.
 - **SC-006**: Security support tickets related to account takeover or unauthorized persistent sessions decrease by at least 30% within one release cycle after launch.
+- **SC-007**: 100% of unauthenticated access attempts to protected routes/endpoints are denied or redirected according to policy during automated verification.

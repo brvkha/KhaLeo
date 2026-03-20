@@ -1,3 +1,5 @@
+import { requestJson } from './apiClient'
+
 export type StudySessionCardDto = {
   cardId: string
   deckId: string
@@ -23,24 +25,6 @@ type RateCardResponseDto = {
 }
 
 type RatingValue = 'AGAIN' | 'HARD' | 'GOOD' | 'EASY'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
-
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  })
-
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`)
-  }
-
-  return (await response.json()) as T
-}
 
 export async function getNextSessionCards(deckId: string): Promise<StudySessionCardDto[]> {
   const response = await requestJson<NextCardsResponseDto>(

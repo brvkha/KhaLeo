@@ -33,6 +33,10 @@ management:
         include: health,info,prometheus
 
 app:
+  seed:
+    local-dev:
+      enabled: ${APP_SEED_LOCAL_DEV_ENABLED:false}
+      default-password: ${APP_SEED_LOCAL_DEV_PASSWORD:khaleo}
   study:
     next-cards:
       default-page-size: ${STUDY_NEXT_CARDS_DEFAULT_PAGE_SIZE:20}

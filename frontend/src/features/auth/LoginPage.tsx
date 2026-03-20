@@ -1,21 +1,29 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 
 export function LoginPage() {
-  const [email, setEmail] = useState('user@khaleo.app')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('khaleo@khaleo.app')
+  const [password, setPassword] = useState('khaleo')
+  const [error, setError] = useState('')
   const login = useAuthStore((state) => state.login)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!email || !password) {
       return
     }
-    login(email)
-    navigate('/')
+    setError('')
+    try {
+      await login(email, password)
+      const returnTo = searchParams.get('returnTo')
+      navigate(returnTo && returnTo.startsWith('/') ? returnTo : '/')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed')
+    }
   }
 
   return (
@@ -43,6 +51,7 @@ export function LoginPage() {
         <button className="rounded bg-slate-900 px-4 py-2 text-white" type="submit">
           Sign in
         </button>
+        {error ? <p className="text-sm text-rose-600">{error}</p> : null}
       </form>
     </section>
   )

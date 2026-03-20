@@ -6,16 +6,25 @@ import { useAuthStore } from '../../store/authStore'
 export function RegisterPage() {
   const [email, setEmail] = useState('new-user@khaleo.app')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const register = useAuthStore((state) => state.register)
   const navigate = useNavigate()
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!email || !password) {
       return
     }
-    register(email)
-    navigate('/')
+    setError('')
+    setMessage('')
+    try {
+      await register(email, password)
+      setMessage('Registered successfully. Please verify email, then sign in.')
+      navigate('/login')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed')
+    }
   }
 
   return (
@@ -42,6 +51,8 @@ export function RegisterPage() {
         <button className="rounded bg-slate-900 px-4 py-2 text-white" type="submit">
           Create account
         </button>
+        {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+        {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
       </form>
     </section>
   )
