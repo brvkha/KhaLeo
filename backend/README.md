@@ -66,6 +66,88 @@ cd backend
 
 Do not remove the volume if you want to keep data. Avoid `docker compose down -v`.
 
+## Shared Aurora-Only Dev Workflow (No Local Docker DB)
+
+If your team wants one consistent shared database, run backend locally against Aurora through SSM tunnel.
+
+Setup once:
+
+```powershell
+cd backend/scripts
+Copy-Item sync-config.sample.ps1 sync-config.ps1
+```
+
+Edit `sync-config.ps1` values (AWS profile/region, DB secret, backend tag/instance).
+
+Start Aurora tunnel:
+
+```powershell
+cd backend/scripts
+./start-aurora-tunnel.ps1
+```
+
+Stop tunnel:
+
+```powershell
+./stop-aurora-tunnel.ps1
+```
+
+Run backend against shared Aurora:
+
+```powershell
+./run-backend-with-aurora.ps1
+```
+
+Seed shared Aurora baseline data (idempotent):
+
+```powershell
+./seed-shared-aurora.ps1
+```
+
+Important:
+
+- Flyway migrations run on startup and keep schema aligned.
+- Shared seed account defaults include `khaleo@khaleo.app / khaleo` and `admin@khaleo.app / khaleo`.
+- Shared DB means all team writes affect everyone; use branch/staging database separation if needed.
+
+## Aurora Sync Scripts (Local <-> Aurora)
+
+Prerequisites:
+
+- AWS CLI with SSM permission
+- `mysql` and `mysqldump` installed in PATH
+- A running backend EC2 target with SSM agent
+
+Setup once:
+
+```powershell
+cd backend/scripts
+Copy-Item sync-config.sample.ps1 sync-config.ps1
+```
+
+Edit `sync-config.ps1` values for your account/region/secret.
+
+Sync local -> Aurora:
+
+```powershell
+cd backend/scripts
+./sync-local-to-aurora.ps1
+```
+
+Sync Aurora -> local (drop/recreate local DB):
+
+```powershell
+cd backend/scripts
+./sync-aurora-to-local.ps1
+```
+
+Non-interactive mode:
+
+```powershell
+./sync-local-to-aurora.ps1 -Force
+./sync-aurora-to-local.ps1 -Force
+```
+
 ## Feature 008 Verification Sequence
 
 1. Run contract tests for public discovery/import and conflict endpoints.
