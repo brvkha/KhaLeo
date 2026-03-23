@@ -25,12 +25,13 @@ public class StudyActivityLog {
     private String deckId;
     private RatingGiven ratingGiven;
     private Long timeSpentMs;
-    private Integer newInterval;
-    private String newEaseFactor;
+    private Integer scheduledDays;
+    private String newStability;
+    private String newDifficulty;
     private String writeStatus;
 
     public static StudyActivityLog of(UUID userId, UUID cardId, RatingGiven ratingGiven, Long timeSpentMs) {
-        return of(userId, cardId, null, ratingGiven, timeSpentMs, null, null);
+        return of(userId, cardId, null, ratingGiven, timeSpentMs, null, null, null);
     }
 
     public static StudyActivityLog of(
@@ -39,8 +40,9 @@ public class StudyActivityLog {
             UUID deckId,
             RatingGiven ratingGiven,
             Long timeSpentMs,
-            Integer newInterval,
-            java.math.BigDecimal newEaseFactor) {
+            Integer scheduledDays,
+            java.math.BigDecimal newStability,
+            java.math.BigDecimal newDifficulty) {
         return StudyActivityLog.builder()
                 .logId(UUID.randomUUID().toString())
                 .timestamp(Instant.now().toString())
@@ -49,8 +51,9 @@ public class StudyActivityLog {
                 .deckId(deckId == null ? null : deckId.toString())
                 .ratingGiven(ratingGiven)
                 .timeSpentMs(timeSpentMs)
-                .newInterval(newInterval)
-                .newEaseFactor(newEaseFactor == null ? null : newEaseFactor.toPlainString())
+                .scheduledDays(scheduledDays)
+                .newStability(newStability == null ? null : newStability.toPlainString())
+                .newDifficulty(newDifficulty == null ? null : newDifficulty.toPlainString())
                 .writeStatus("PENDING")
                 .build();
     }
@@ -67,11 +70,14 @@ public class StudyActivityLog {
         }
         item.put("ratingGiven", AttributeValue.fromS(ratingGiven.name()));
         item.put("timeSpentMs", AttributeValue.fromN(String.valueOf(timeSpentMs)));
-        if (newInterval != null) {
-            item.put("newInterval", AttributeValue.fromN(String.valueOf(newInterval)));
+        if (scheduledDays != null) {
+            item.put("scheduledDays", AttributeValue.fromN(String.valueOf(scheduledDays)));
         }
-        if (!isBlank(newEaseFactor)) {
-            item.put("newEaseFactor", AttributeValue.fromN(newEaseFactor));
+        if (!isBlank(newStability)) {
+            item.put("newStability", AttributeValue.fromN(newStability));
+        }
+        if (!isBlank(newDifficulty)) {
+            item.put("newDifficulty", AttributeValue.fromN(newDifficulty));
         }
         item.put("writeStatus", AttributeValue.fromS(writeStatus == null ? "PENDING" : writeStatus));
         return item;

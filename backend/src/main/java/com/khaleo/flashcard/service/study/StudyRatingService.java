@@ -3,7 +3,6 @@ package com.khaleo.flashcard.service.study;
 import com.khaleo.flashcard.config.observability.NewRelicDeckMediaInstrumentation;
 import com.khaleo.flashcard.entity.Card;
 import com.khaleo.flashcard.entity.CardLearningState;
-import com.khaleo.flashcard.model.dynamo.RatingGiven;
 import com.khaleo.flashcard.model.study.RateCardRequest;
 import com.khaleo.flashcard.model.study.RateCardResponse;
 import com.khaleo.flashcard.repository.CardLearningStateRepository;
@@ -63,11 +62,16 @@ public class StudyRatingService {
 
                         SpacedRepetitionService.RatingOutcome outcome = studySchedulerService.apply(current, request.rating(), now);
                         current.setState(outcome.state());
-                        current.setIntervalInDays(outcome.intervalInDays());
-                        current.setEaseFactor(outcome.easeFactor());
+                        current.setIntervalInDays(outcome.scheduledDays());
                         current.setNextReviewDate(outcome.nextReviewAt());
                         current.setLastReviewedAt(outcome.lastReviewedAt());
-                        current.setLearningStepGoodCount(outcome.learningStepGoodCount());
+                        current.setFsrsScheduledDays(outcome.scheduledDays());
+                        current.setFsrsStability(outcome.stability());
+                        current.setFsrsDifficulty(outcome.difficulty());
+                        current.setFsrsElapsedDays(outcome.elapsedDays());
+                        current.setFsrsReps(outcome.reps());
+                        current.setFsrsLapses(outcome.lapses());
+                        current.setLearningStepGoodCount(0);
 
                         return cardLearningStateRepository.saveAndFlush(current);
                     });
@@ -78,8 +82,9 @@ public class StudyRatingService {
                     card.getDeck().getId(),
                     request.rating(),
                     request.timeSpentMs(),
-                    saved.getIntervalInDays(),
-                    saved.getEaseFactor());
+                    saved.getFsrsScheduledDays(),
+                    saved.getFsrsStability(),
+                    saved.getFsrsDifficulty());
 
             instrumentation.recordStudyRatingOutcome("success", Map.of(
                     "userId", userId,
@@ -91,8 +96,9 @@ public class StudyRatingService {
                     cardId,
                     saved.getState(),
                     saved.getNextReviewDate(),
-                    saved.getIntervalInDays(),
-                    saved.getEaseFactor());
+                    saved.getFsrsScheduledDays(),
+                    saved.getFsrsStability(),
+                    saved.getFsrsDifficulty());
         } catch (RuntimeException ex) {
             instrumentation.recordStudyRatingFailure(ex.getClass().getSimpleName(), Map.of(
                     "userId", userId,

@@ -83,6 +83,13 @@ export async function logoutWithRefreshToken(refreshToken: string): Promise<void
   })
 }
 
+export async function refreshAccessToken(refreshToken: string): Promise<LoginResponse> {
+  return requestJson<LoginResponse>('/api/v1/auth/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ refreshToken }),
+  })
+}
+
 export function getClaimsFromAccessToken(accessToken: string): AuthClaims {
   const payload = decodeJwtPayload(accessToken)
   const sub = typeof payload.sub === 'string' ? payload.sub : ''

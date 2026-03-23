@@ -1,4 +1,4 @@
-# Quickstart: SM-2 Spaced Repetition and Study Activity Logging
+# Quickstart: FSRS v4 Spaced Repetition and Study Activity Logging
 
 ## 1. Prerequisites
 
@@ -10,12 +10,13 @@
 ## 2. Implement Scheduling Domain Logic
 
 1. Add/extend domain service under `backend/src/main/java/com/khaleo/flashcard/service/study/`:
-   - Apply SM-2 formulas for `AGAIN`, `HARD`, `GOOD`, `EASY`.
-   - Enforce `easeFactor >= 1.3`.
-   - Implement state transitions for `NEW`, `LEARNING`, `MASTERED`, `REVIEW`.
-2. Ensure first and second `GOOD` learning-step behavior is explicit:
-   - first `GOOD` on `NEW` -> 10-minute relearning timer.
-   - second qualifying `GOOD` on `LEARNING` -> 1-day mastered waiting interval.
+   - Apply FSRS v4 formulas for `AGAIN`, `HARD`, `GOOD`, `EASY`.
+   - Implement retrievability $R(t,S)$ and recall/forget stability update formulas.
+   - Implement state transitions for `NEW`, `LEARNING`, `REVIEW`, `RELEARNING` (plus legacy `MASTERED` compatibility mapping).
+2. Ensure rating responses expose FSRS outputs:
+   - `scheduledDays`
+   - `newStability`
+   - `newDifficulty`
 
 ## 3. Implement Study APIs
 
@@ -64,7 +65,7 @@ mvn -Dtest="*SpacedRepetition*" test
 
 - Next-cards ordering always prioritizes due learning, then due review, then new eligible cards.
 - Daily unique new-card limit blocks additional new cards once quota is reached.
-- SM-2 calculations and minimum ease-factor clamp are deterministic.
+- FSRS calculations for D/S/R are deterministic under default weight vector.
 - Rating API remains responsive even when activity-log write path is slow/failing.
 - Async logging failures are visible in telemetry.
 

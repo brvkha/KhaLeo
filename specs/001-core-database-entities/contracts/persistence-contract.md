@@ -16,7 +16,7 @@ services and future API layers.
   - `User.email` is unique, non-null, trimmed, and lowercase-normalized.
   - `User.dailyLearningLimit` default `9999`, allowed range `1..9999`.
   - `Card` requires content on both front and back sides (text or media on each).
-  - `CardLearningState` supports states `NEW|LEARNING|MASTERED|REVIEW`.
+  - `CardLearningState` supports states `NEW|LEARNING|REVIEW|RELEARNING` with legacy `MASTERED` compatibility.
   - Unique active state constraint on `(userId, cardId)`.
   - `CardLearningState.version` participates in optimistic concurrency checks with at most one retry.
 

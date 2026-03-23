@@ -1,4 +1,4 @@
-# Tasks: SM-2 Spaced Repetition and Study Activity Logging
+# Tasks: FSRS v4 Spaced Repetition and Study Activity Logging
 
 **Input**: Design documents from `/specs/004-sm2-study-logging/`
 **Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/study-engine-contract.md, quickstart.md
@@ -24,7 +24,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [X] T005 Add learning-step and scheduling fields for SM-2 transitions in backend/src/main/java/com/khaleo/flashcard/entity/CardLearningState.java
+- [X] T005 Add FSRS scheduling fields (stability, difficulty, elapsed/scheduled days, reps, lapses) in backend/src/main/java/com/khaleo/flashcard/entity/CardLearningState.java
 - [X] T006 [P] Add query methods for due learning/review tiers and quota support in backend/src/main/java/com/khaleo/flashcard/repository/CardLearningStateRepository.java
 - [X] T007 [P] Add pagination token model and response envelope types in backend/src/main/java/com/khaleo/flashcard/model/study/StudyPaginationToken.java and backend/src/main/java/com/khaleo/flashcard/model/study/NextCardsPageResponse.java
 - [X] T008 Implement shared authorization and deck/card access guard for study endpoints in backend/src/main/java/com/khaleo/flashcard/service/study/StudyAccessService.java
@@ -62,20 +62,20 @@
 
 ## Phase 4: User Story 2 - Rate Cards With Correct Scheduling (Priority: P2)
 
-**Goal**: Apply validated learner ratings to card state, interval, and ease factor with strict SM-2 fidelity.
+**Goal**: Apply validated learner ratings to card state, scheduled days, difficulty, and stability with strict FSRS v4 fidelity.
 
-**Independent Test**: Submit ratings across NEW/LEARNING/MASTERED/REVIEW paths and verify deterministic transitions and minimum ease-factor enforcement.
+**Independent Test**: Submit ratings across NEW/LEARNING/REVIEW/RELEARNING paths and verify deterministic transitions and FSRS formula compliance.
 
 ### Tests for User Story 2
 
 - [X] T020 [P] [US2] Add rating API contract tests in backend/src/test/java/com/khaleo/flashcard/contract/study/StudyRateCardContractTest.java
 - [X] T021 [P] [US2] Add rating-transition integration tests in backend/src/test/java/com/khaleo/flashcard/integration/study/StudyRateCardTransitionIT.java
-- [X] T022 [P] [US2] Add SM-2 formula unit tests in backend/src/test/java/com/khaleo/flashcard/unit/study/SpacedRepetitionServiceTest.java
+- [X] T022 [P] [US2] Add FSRS formula unit tests in backend/src/test/java/com/khaleo/flashcard/unit/study/SpacedRepetitionServiceTest.java
 
 ### Implementation for User Story 2
 
 - [X] T023 [P] [US2] Add rating request/response DTOs in backend/src/main/java/com/khaleo/flashcard/model/study/RateCardRequest.java and backend/src/main/java/com/khaleo/flashcard/model/study/RateCardResponse.java
-- [X] T024 [P] [US2] Implement SM-2 scheduling math and ease-factor floor in backend/src/main/java/com/khaleo/flashcard/service/study/SpacedRepetitionService.java
+- [X] T024 [P] [US2] Implement FSRS scheduling math and D/S/R update formulas in backend/src/main/java/com/khaleo/flashcard/service/study/SpacedRepetitionService.java
 - [X] T025 [US2] Implement rating persistence orchestration in backend/src/main/java/com/khaleo/flashcard/service/study/StudyRatingService.java
 - [X] T026 [US2] Implement POST /api/v1/study/cards/{cardId}/rate in backend/src/main/java/com/khaleo/flashcard/controller/study/StudyController.java
 - [X] T027 [US2] Add request validation and deterministic error mapping for rating/time inputs in backend/src/main/java/com/khaleo/flashcard/controller/study/StudyController.java and backend/src/main/java/com/khaleo/flashcard/controller/GlobalExceptionHandler.java
@@ -173,7 +173,7 @@ Task: "T015 Implement daily quota service"
 # Parallel US2 test execution
 Task: "T020 Contract test for POST /rate"
 Task: "T021 Integration test for state transitions"
-Task: "T022 Unit test for SM-2 formulas"
+Task: "T022 Unit test for FSRS formulas"
 
 # Parallel US2 core build tasks
 Task: "T023 Add rating DTOs"

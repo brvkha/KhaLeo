@@ -12,8 +12,10 @@ type AuthState = {
   banUser: (email: string) => void
 }
 
+const initialUser = readAuthSession()?.currentUser ?? null
+
 export const useAuthStore = create<AuthState>((set) => ({
-  currentUser: null,
+  currentUser: initialUser,
   login: async (email, password) => {
     const loginResponse = await loginWithPassword(email, password)
     const claims = getClaimsFromAccessToken(loginResponse.accessToken)

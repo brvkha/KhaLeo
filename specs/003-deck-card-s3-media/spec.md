@@ -77,7 +77,7 @@ A user can request short-lived upload authorization for allowed media files, upl
 
 ### Constitutional Impact *(mandatory)*
 
-- **Algorithm Fidelity**: No change to SM-2 scheduling math or card-state transition rules. User-initiated deck deletion removes related learning-state records by design, but does not alter scheduling logic for remaining records.
+- **Algorithm Fidelity**: No change to FSRS v4 scheduling math or card-state transition rules. User-initiated deck deletion removes related learning-state records by design, but does not alter scheduling logic for remaining records.
 - **Security Impact**: Enforces a strict access boundary where only public deck discovery is guest-readable; all deck/card content and non-discovery operations require authenticated JWT, while mutation paths continue owner/admin authorization, media policy, and per-user rate limiting.
 - **Observability Impact**: Requires audit-friendly logs and operational metrics for deck/card create-update-delete, authorization denials, media upload authorization issuance, validation failures, rate-limit rejections, and expired authorization usage.
 - **Infrastructure Impact**: Uses object storage upload authorization capability and associated access policy controls; no change to deployment topology is required.
@@ -99,7 +99,7 @@ A user can request short-lived upload authorization for allowed media files, upl
 - **FR-011**: System MUST limit media upload authorization requests to 30 requests per user per minute and reject excess requests.
 - **FR-012**: Every list-producing API MUST return paginated responses and document accepted pagination parameters and default behavior.
 - **FR-013**: System MUST define required observability outputs for deck/card management paths and media upload authorization paths, including success, validation failure, authorization failure, and rate-limit rejection outcomes.
-- **FR-014**: System MUST preserve existing SM-2 scheduling fidelity, card-state transitions, and account-level daily learning limits without introducing behavioral changes.
+- **FR-014**: System MUST preserve existing FSRS v4 scheduling fidelity, card-state transitions, and account-level daily learning limits without introducing behavioral changes.
 
 ### Key Entities *(include if feature involves data)*
 

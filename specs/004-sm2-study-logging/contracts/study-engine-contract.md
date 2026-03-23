@@ -1,4 +1,4 @@
-# Study Engine Contract: SM-2 Spaced Repetition and Study Activity Logging
+# Study Engine Contract: FSRS v4 Spaced Repetition and Study Activity Logging
 
 ## Purpose
 
@@ -49,11 +49,12 @@ Define the public REST contract for due-card retrieval and card-rating operation
     - `cardId`
     - `state`
     - `nextReviewAt`
-    - `newInterval`
-    - `newEaseFactor`
+    - `scheduledDays`
+    - `newStability`
+    - `newDifficulty`
 - Behavior contract:
-  - Applies SM-2 logic and state transitions.
-  - Enforces minimum ease factor of 1.3.
+  - Applies FSRS v4 logic and state transitions.
+  - Enforces FSRS parameterized D/S updates and retrievability-based interval calculation.
   - Triggers asynchronous activity log write with final schedule values.
 - Failure responses:
   - `400 Bad Request` invalid rating/time input.

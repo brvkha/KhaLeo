@@ -57,11 +57,11 @@ public class NextCardsService {
         UUID userId = context.actorId();
 
         List<CardLearningState> dueLearning = cardLearningStateRepository
-                .findByUserIdAndCardDeckIdAndStateAndNextReviewDateLessThanEqualOrderByNextReviewDateAsc(
-                        userId,
-                        deckId,
-                        CardLearningStateType.LEARNING,
-                        now);
+            .findByUserIdAndCardDeckIdAndStateInAndNextReviewDateLessThanEqualOrderByNextReviewDateAsc(
+                userId,
+                deckId,
+                List.of(CardLearningStateType.LEARNING, CardLearningStateType.RELEARNING),
+                now);
 
         List<CardLearningState> dueReview = cardLearningStateRepository
                 .findByUserIdAndCardDeckIdAndStateInAndNextReviewDateLessThanEqualOrderByNextReviewDateAsc(

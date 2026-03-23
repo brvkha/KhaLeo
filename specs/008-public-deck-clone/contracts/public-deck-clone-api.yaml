@@ -519,7 +519,7 @@ components:
           type: string
         state:
           type: string
-          enum: [NEW, LEARNING, REVIEW, MASTERED]
+          enum: [NEW, LEARNING, REVIEW, RELEARNING, MASTERED]
         nextReviewDate:
           type: string
           format: date-time
@@ -554,20 +554,23 @@ components:
 
     RateCardResponse:
       type: object
-      required: [cardId, state, nextReviewAt, newInterval, newEaseFactor]
+      required: [cardId, state, nextReviewAt, scheduledDays, newStability, newDifficulty]
       properties:
         cardId:
           type: string
           format: uuid
         state:
           type: string
-          enum: [NEW, LEARNING, REVIEW, MASTERED]
+          enum: [NEW, LEARNING, REVIEW, RELEARNING, MASTERED]
         nextReviewAt:
           type: string
           format: date-time
-        newInterval:
+        scheduledDays:
           type: integer
-        newEaseFactor:
+        newStability:
+          type: number
+          format: double
+        newDifficulty:
           type: number
           format: double
 

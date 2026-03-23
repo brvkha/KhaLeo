@@ -7,6 +7,7 @@ import com.khaleo.flashcard.entity.enums.CardLearningStateType;
 import com.khaleo.flashcard.model.dynamo.RatingGiven;
 import com.khaleo.flashcard.service.study.SpacedRepetitionService;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -15,49 +16,52 @@ class SpacedRepetitionServiceTest {
     private final SpacedRepetitionService service = new SpacedRepetitionService();
 
     @Test
-    void shouldMoveNewCardToLearningOnFirstGood() {
+    void shouldInitializeFsrsForNewCardOnGood() {
         CardLearningState state = CardLearningState.builder()
                 .state(CardLearningStateType.NEW)
-                .easeFactor(BigDecimal.valueOf(2.5))
-                .intervalInDays(0)
-                .learningStepGoodCount(0)
                 .build();
 
         SpacedRepetitionService.RatingOutcome outcome = service.apply(state, RatingGiven.GOOD, Instant.now());
 
         assertThat(outcome.state()).isEqualTo(CardLearningStateType.LEARNING);
-        assertThat(outcome.intervalInDays()).isZero();
-        assertThat(outcome.learningStepGoodCount()).isEqualTo(1);
+        assertThat(outcome.scheduledDays()).isGreaterThanOrEqualTo(1);
+        assertThat(outcome.stability()).isPositive();
+        assertThat(outcome.difficulty()).isBetween(BigDecimal.ONE, BigDecimal.TEN);
     }
 
     @Test
-    void shouldMoveLearningCardToMasteredOnSecondGood() {
-        CardLearningState state = CardLearningState.builder()
-                .state(CardLearningStateType.LEARNING)
-                .easeFactor(BigDecimal.valueOf(2.5))
-                .intervalInDays(0)
-                .learningStepGoodCount(1)
-                .build();
-
-        SpacedRepetitionService.RatingOutcome outcome = service.apply(state, RatingGiven.GOOD, Instant.now());
-
-        assertThat(outcome.state()).isEqualTo(CardLearningStateType.MASTERED);
-        assertThat(outcome.intervalInDays()).isEqualTo(1);
-    }
-
-    @Test
-    void shouldClampEaseFactorAtMinimumOnAgain() {
+    void shouldMoveReviewCardToRelearningOnAgain() {
         CardLearningState state = CardLearningState.builder()
                 .state(CardLearningStateType.REVIEW)
-                .easeFactor(BigDecimal.valueOf(1.35))
-                .intervalInDays(5)
-                .learningStepGoodCount(1)
+                .fsrsDifficulty(BigDecimal.valueOf(5.5))
+                .fsrsStability(BigDecimal.valueOf(3.2))
+                .lastReviewedAt(Instant.now().minusSeconds(3L * 24L * 60L * 60L))
+                .fsrsLapses(0)
                 .build();
 
-        SpacedRepetitionService.RatingOutcome outcome = service.apply(state, RatingGiven.AGAIN, Instant.now());
+        Instant now = Instant.now();
+        SpacedRepetitionService.RatingOutcome outcome = service.apply(state, RatingGiven.AGAIN, now);
 
-        assertThat(outcome.state()).isEqualTo(CardLearningStateType.LEARNING);
-        assertThat(outcome.intervalInDays()).isZero();
-        assertThat(outcome.easeFactor()).isEqualByComparingTo("1.3");
+        assertThat(outcome.state()).isEqualTo(CardLearningStateType.RELEARNING);
+        assertThat(outcome.scheduledDays()).isZero();
+        assertThat(Duration.between(now, outcome.nextReviewAt()).toSeconds()).isBetween(60L, 61L);
+        assertThat(outcome.lapses()).isEqualTo(1);
+        assertThat(outcome.stability()).isPositive();
+    }
+
+    @Test
+    void shouldIncreaseRepsOnEveryRating() {
+        CardLearningState state = CardLearningState.builder()
+                .state(CardLearningStateType.REVIEW)
+                .fsrsDifficulty(BigDecimal.valueOf(5.5))
+                .fsrsStability(BigDecimal.valueOf(2.5))
+                .fsrsReps(4)
+                .lastReviewedAt(Instant.now().minusSeconds(24L * 60L * 60L))
+                .build();
+
+        SpacedRepetitionService.RatingOutcome outcome = service.apply(state, RatingGiven.HARD, Instant.now());
+
+        assertThat(outcome.reps()).isEqualTo(5);
+        assertThat(outcome.elapsedDays()).isGreaterThanOrEqualTo(1);
     }
 }

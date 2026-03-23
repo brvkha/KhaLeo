@@ -30,7 +30,7 @@ Implement an enterprise-grade AWS delivery path where push-to-main triggers CI, 
 - Observability gate: PASS. Plan keeps JSON logging, Splunk HEC, New Relic, and CloudWatch alarm coverage as explicit deliverables.
 - Data gate: PASS. Aurora and Dynamo responsibilities remain separated; no Flyway contract violation.
 - Quality gate: PASS with action. CI must include backend/frontend gates plus Terraform validate/plan and preserve 80% test target.
-- Compliance gate: PASS. No direct SM-2 algorithm changes; study constraints remain unaffected.
+- Compliance gate: PASS. No direct FSRS v4 algorithm changes; study constraints remain unaffected.
 
 ## Project Structure
 
@@ -87,7 +87,7 @@ No constitution violations requiring justification.
 - Observability gate: PASS. Delivery contract requires deployment summaries and existing CloudWatch/Splunk/New Relic posture remains intact.
 - Data gate: PASS. Aurora/Dynamo boundaries remain unchanged and documented in data model.
 - Quality gate: PASS with implementation follow-up. CI gates and Terraform validate/plan are defined for task execution.
-- Compliance gate: PASS. No SM-2, card-state, or daily-learning-limit rule changes in this scope.
+- Compliance gate: PASS. No FSRS v4, card-state, or daily-learning-limit rule changes in this scope.
 
 ## Final Compliance Checklist
 

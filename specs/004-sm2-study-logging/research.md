@@ -1,14 +1,14 @@
-# Phase 0 Research: SM-2 Spaced Repetition and Study Activity Logging
+# Phase 0 Research: FSRS v4 Spaced Repetition and Study Activity Logging
 
-## Decision 1: Treat SM-2 scheduling as a dedicated domain service
-- Decision: Implement all rating math and state transitions in a single Spaced Repetition domain service consumed by study APIs.
+## Decision 1: Treat FSRS scheduling as a dedicated domain service
+- Decision: Implement all FSRS v4 rating math and state transitions in a single Spaced Repetition domain service consumed by study APIs.
 - Rationale: Centralizing scheduling logic prevents drift between endpoints and keeps algorithm fidelity testable.
 - Alternatives considered: Embedding math in controller/service handlers (rejected due to duplication risk and weaker testability).
 
-## Decision 2: Model card state progression with explicit waiting semantics
-- Decision: Preserve explicit lifecycle progression `NEW -> LEARNING -> MASTERED` (waiting) -> `REVIEW`, where mastered-waiting becomes review-eligible after one day.
-- Rationale: Matches constitutional learning-state requirements and supports deterministic due-card queries.
-- Alternatives considered: Collapsing mastered-waiting directly into review (rejected because it obscures required product semantics).
+## Decision 2: Model card progression with FSRS-compatible states
+- Decision: Use `NEW`, `LEARNING`, `REVIEW`, and `RELEARNING` as the active state machine, while treating legacy `MASTERED` records as `REVIEW` during retrieval and scheduling.
+- Rationale: Aligns with FSRS flow and avoids unsafe bulk state rewrites of historical records.
+- Alternatives considered: Hard-migrating all historical `MASTERED` values immediately (rejected due to migration risk).
 
 ## Decision 3: Enforce daily new-card limits by unique-card counting per user-day
 - Decision: Daily limit checks count unique cards first studied today in server timezone and only gate introduction of additional new cards.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getNextSessionCards, rateSessionCard, type StudySessionCardDto } from '../../services/studySessionApi'
 
@@ -23,7 +23,7 @@ export function StudySessionPage() {
 
   const current = useMemo(() => cards[0], [cards])
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (!deckId) {
       setError('Missing deck id for study session')
       return
@@ -40,11 +40,23 @@ export function StudySessionPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [deckId])
 
   useEffect(() => {
     void refresh()
-  }, [deckId])
+  }, [refresh])
+
+  useEffect(() => {
+    if (loading || cards.length > 0) {
+      return
+    }
+
+    const timer = window.setInterval(() => {
+      void refresh()
+    }, 15_000)
+
+    return () => window.clearInterval(timer)
+  }, [cards.length, loading, refresh])
 
   const onRate = async (value: UiRating) => {
     if (!current || rating) {
@@ -55,7 +67,13 @@ export function StudySessionPage() {
     try {
       const elapsed = Math.max(0, Date.now() - shownAt)
       await rateSessionCard(current.cardId, toApiRating(value), elapsed)
-      setCards((prev) => prev.slice(1))
+      setCards((prev) => {
+        const next = prev.slice(1)
+        if (next.length === 0) {
+          void refresh()
+        }
+        return next
+      })
       setRevealed(false)
       setShownAt(Date.now())
     } catch (err) {

@@ -69,8 +69,9 @@ class StudyRateCardContractTest extends IntegrationPersistenceTestBase {
 
         assertThat(response).contains("cardId");
         assertThat(response).contains("state");
-        assertThat(response).contains("newInterval");
-        assertThat(response).contains("newEaseFactor");
+        assertThat(response).contains("scheduledDays");
+        assertThat(response).contains("newStability");
+        assertThat(response).contains("newDifficulty");
     }
 
     @Test

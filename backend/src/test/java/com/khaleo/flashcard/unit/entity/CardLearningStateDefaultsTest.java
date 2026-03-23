@@ -16,6 +16,12 @@ class CardLearningStateDefaultsTest {
                 .state(null)
                 .easeFactor(null)
                 .intervalInDays(null)
+            .fsrsStability(null)
+            .fsrsDifficulty(null)
+            .fsrsElapsedDays(null)
+            .fsrsScheduledDays(null)
+            .fsrsReps(null)
+            .fsrsLapses(null)
                 .build();
 
         Method defaultsMethod = CardLearningState.class.getDeclaredMethod("applyDefaults");
@@ -25,5 +31,11 @@ class CardLearningStateDefaultsTest {
         assertThat(state.getState()).isEqualTo(CardLearningStateType.NEW);
         assertThat(state.getEaseFactor()).isEqualByComparingTo(BigDecimal.valueOf(2.5));
         assertThat(state.getIntervalInDays()).isZero();
+        assertThat(state.getFsrsStability()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(state.getFsrsDifficulty()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(state.getFsrsElapsedDays()).isZero();
+        assertThat(state.getFsrsScheduledDays()).isZero();
+        assertThat(state.getFsrsReps()).isZero();
+        assertThat(state.getFsrsLapses()).isZero();
     }
 }

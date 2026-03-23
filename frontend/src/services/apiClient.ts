@@ -1,4 +1,5 @@
-import { getAccessToken } from './authSession'
+import { refreshAccessToken } from './authApi'
+import { getAccessToken, persistAuthSession, readAuthSession } from './authSession'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -15,16 +16,46 @@ function parseErrorMessage(payload: unknown, fallbackStatus: number): string {
 
 export async function requestJson<T>(path: string, init?: RequestOptions): Promise<T> {
   const useAuth = init?.useAuth !== false
-  const token = useAuth ? getAccessToken() : null
+  const requestWithToken = (token: string | null) =>
+    fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init?.headers ?? {}),
+      },
+    })
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  })
+  const tryRefreshAccessToken = async (): Promise<string | null> => {
+    const session = readAuthSession()
+    if (!session?.refreshToken) {
+      return null
+    }
+
+    try {
+      const refreshResponse = await refreshAccessToken(session.refreshToken)
+      const nextAccessToken = refreshResponse.accessToken
+      persistAuthSession({
+        ...session,
+        accessToken: nextAccessToken,
+        refreshToken: refreshResponse.refreshToken ?? session.refreshToken,
+      })
+      return nextAccessToken
+    } catch {
+      persistAuthSession(null)
+      return null
+    }
+  }
+
+  const token = useAuth ? getAccessToken() : null
+  let response = await requestWithToken(token)
+
+  if (response.status === 401 && useAuth) {
+    const refreshedAccessToken = await tryRefreshAccessToken()
+    if (refreshedAccessToken) {
+      response = await requestWithToken(refreshedAccessToken)
+    }
+  }
 
   if (!response.ok) {
     let payload: unknown = null

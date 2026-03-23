@@ -1,4 +1,4 @@
-# Specification Quality Checklist: SM-2 Study Engine and Activity Logging
+# Specification Quality Checklist: FSRS v4 Study Engine and Activity Logging
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-03-16

@@ -5,7 +5,7 @@ export type StudySessionCardDto = {
   deckId: string
   frontText: string
   backText: string
-  state: 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED'
+  state: 'NEW' | 'LEARNING' | 'REVIEW' | 'RELEARNING' | 'MASTERED'
   nextReviewDate: string | null
   sourceTier: string
 }
@@ -18,10 +18,11 @@ type NextCardsResponseDto = {
 
 type RateCardResponseDto = {
   cardId: string
-  state: 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED'
+  state: 'NEW' | 'LEARNING' | 'REVIEW' | 'RELEARNING' | 'MASTERED'
   nextReviewAt: string
-  newInterval: number
-  newEaseFactor: number
+  scheduledDays: number
+  newStability: number
+  newDifficulty: number
 }
 
 type RatingValue = 'AGAIN' | 'HARD' | 'GOOD' | 'EASY'

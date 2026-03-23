@@ -57,32 +57,36 @@
   - One-to-many with `CardLearningState`.
 
 ### 4. CardLearningState
-- Purpose: Per-user SM-2 progression state for each card.
+- Purpose: Per-user FSRS v4 progression state for each card.
 - Fields:
   - `id` (UUID, PK)
   - `cardId` (UUID, FK -> Card.id, not null)
   - `userId` (UUID, FK -> User.id, not null)
-  - `state` (ENUM: `NEW`, `LEARNING`, `MASTERED`, `REVIEW`; default `NEW`)
-  - `easeFactor` (DECIMAL/FLOAT, default `2.5`)
-  - `intervalInDays` (INT, default `0`)
+  - `state` (ENUM: `NEW`, `LEARNING`, `REVIEW`, `RELEARNING`; default `NEW`, with legacy `MASTERED` compatibility)
+  - `fsrsStability` (DECIMAL/FLOAT, default `0`)
+  - `fsrsDifficulty` (DECIMAL/FLOAT, default `0`)
+  - `fsrsScheduledDays` (INT, default `0`)
+  - `fsrsElapsedDays` (INT, default `0`)
+  - `fsrsReps` (INT, default `0`)
+  - `fsrsLapses` (INT, default `0`)
   - `nextReviewDate` (TIMESTAMP, nullable)
   - `version` (BIGINT, not null, optimistic lock)
   - `createdAt` (TIMESTAMP, not null)
   - `updatedAt` (TIMESTAMP, not null)
 - Validation rules:
   - Exactly one active row per `(userId, cardId)` enforced by unique constraint.
-  - Interval cannot be negative.
-  - `easeFactor` must remain positive (`> 0`) and defaults to 2.5.
+  - Scheduled and elapsed day counters cannot be negative.
+  - Difficulty is clamped to [1,10] once initialized.
 - Relationships:
   - Many-to-one with `Card`.
   - Many-to-one with `User`.
 - Concurrency rule:
   - Updates use optimistic locking with one bounded retry; persistent conflict is rejected deterministically.
 - State transitions:
-  - `NEW -> LEARNING` on first study.
-  - `LEARNING -> REVIEW` when interval scheduling begins.
-  - `REVIEW -> MASTERED` when long-interval threshold is reached.
-  - `MASTERED -> REVIEW` when review is due and scheduled again.
+  - `NEW -> LEARNING` for `AGAIN|HARD|GOOD` and `NEW -> REVIEW` for `EASY`.
+  - `LEARNING -> REVIEW` when promoted by qualifying ratings.
+  - `REVIEW -> RELEARNING` on `AGAIN` lapse.
+  - `RELEARNING -> REVIEW` when promoted by qualifying ratings.
 
 ## NoSQL Entity (DynamoDB)
 

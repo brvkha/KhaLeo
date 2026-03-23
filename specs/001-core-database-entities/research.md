@@ -7,12 +7,12 @@
 
 ## Decision 2: Treat Aurora as transactional source of truth and DynamoDB logs as asynchronous side stream
 - Decision: Commit transactional entities to Aurora first; publish StudyActivityLog asynchronously with retry and dead-letter handling.
-- Rationale: Preserves correctness for user progress and SM-2 scheduling when DynamoDB is transiently unavailable.
+- Rationale: Preserves correctness for user progress and FSRS v4 scheduling when DynamoDB is transiently unavailable.
 - Alternatives considered: Synchronous dual-write all-or-nothing (rejected due to higher availability risk); log-first ordering (rejected because it can produce orphaned events).
 
 ## Decision 3: Enforce one active learning-state row per `(userId, cardId)`
 - Decision: Use a uniqueness constraint for active state identity and update-in-place semantics for subsequent reviews.
-- Rationale: Prevents conflicting schedule truth and simplifies SM-2 correctness.
+- Rationale: Prevents conflicting schedule truth and simplifies FSRS v4 correctness.
 - Alternatives considered: Timestamp-based latest resolution across duplicate rows (rejected due to ambiguity); immutable history without current-state pointer (rejected as unnecessary complexity in this phase).
 
 ## Decision 4: Concurrency control for learning-state updates

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.khaleo.flashcard.config.observability.NewRelicDeckMediaInstrumentation;
 import com.khaleo.flashcard.model.dynamo.RatingGiven;
@@ -40,7 +39,8 @@ class StudyActivityLogPublisherTest {
                         RatingGiven.EASY,
                         1200L,
                         4,
-                        BigDecimal.valueOf(2.65))
+                BigDecimal.valueOf(2.65),
+                BigDecimal.valueOf(4.8))
                 .join();
 
         verify(repository, times(1)).save(any(StudyActivityLog.class));
@@ -57,7 +57,8 @@ class StudyActivityLogPublisherTest {
                         RatingGiven.GOOD,
                         500L,
                         1,
-                        BigDecimal.valueOf(2.5))
+                BigDecimal.valueOf(2.5),
+                BigDecimal.valueOf(5.1))
                 .join();
 
         assertThat(retryService.deadLetterCount()).isEqualTo(1);

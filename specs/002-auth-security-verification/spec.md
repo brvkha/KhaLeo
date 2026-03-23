@@ -64,7 +64,7 @@ A user who forgets a password can reset it through a time-limited email flow, wh
 
 ### Constitutional Impact *(mandatory)*
 
-- **Algorithm Fidelity**: No impact on SM-2 scheduling behavior, card-state transitions, or account-level daily learning limits.
+- **Algorithm Fidelity**: No impact on FSRS v4 scheduling behavior, card-state transitions, or account-level daily learning limits.
 - **Security Impact**: Establishes required identity controls, short/long-lived token model, email verification gate, password reset, and lockout policy aligned with repository security mandates.
 - **Observability Impact**: Requires auditable security event coverage for registration, verification, sign-in success/failure, lockout trigger, password reset request/completion, refresh, and sign-out revocation outcomes.
 - **Infrastructure Impact**: Uses existing cloud email-delivery capability and persistence resources already defined for this platform; no new deployment topology is required.
@@ -86,7 +86,7 @@ A user who forgets a password can reset it through a time-limited email flow, wh
 - **FR-011**: System MUST provide public authentication endpoints for registration, verification, sign-in, credential refresh, password reset request/completion, and sign-out.
 - **FR-012**: Every list-producing API MUST define pagination behavior or explicitly state why no list endpoint exists for this feature. This feature introduces no list-producing endpoints.
 - **FR-013**: System MUST define required observability outputs for registration, verification, sign-in failures, lockouts, password reset, refresh, and sign-out revocation.
-- **FR-014**: System MUST preserve existing SM-2 scheduling fidelity, card-state transitions, and account-level daily learning limits without modification.
+- **FR-014**: System MUST preserve existing FSRS v4 scheduling fidelity, card-state transitions, and account-level daily learning limits without modification.
 - **FR-015**: System MUST enforce that only `/decks` discovery route is publicly accessible in the web app, while all other application routes require authenticated session.
 - **FR-016**: System MUST require JWT authentication for all protected `/api/v1/**` endpoints except explicitly public authentication endpoints and public deck discovery endpoints.
 - **FR-017**: Authentication flow MUST support safe post-login return-to-target behavior for users redirected from protected routes.

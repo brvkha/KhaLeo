@@ -68,8 +68,9 @@ public class StudyActivityLogPublisher {
             UUID deckId,
             RatingGiven ratingGiven,
             Long timeSpentMs,
-            Integer newInterval,
-            BigDecimal newEaseFactor) {
+            Integer scheduledDays,
+            BigDecimal newStability,
+            BigDecimal newDifficulty) {
 
         StudyActivityLog logEntry = StudyActivityLog.of(
             userId,
@@ -77,8 +78,9 @@ public class StudyActivityLogPublisher {
             deckId,
             ratingGiven == null ? RatingGiven.GOOD : ratingGiven,
             timeSpentMs == null ? 0L : timeSpentMs,
-            newInterval,
-            newEaseFactor);
+            scheduledDays,
+            newStability,
+            newDifficulty);
 
         return publishAsync(logEntry);
     }

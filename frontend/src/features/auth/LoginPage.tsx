@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
@@ -8,8 +8,17 @@ export function LoginPage() {
   const [password, setPassword] = useState('khaleo')
   const [error, setError] = useState('')
   const login = useAuthStore((state) => state.login)
+  const currentUser = useAuthStore((state) => state.currentUser)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    if (!currentUser) {
+      return
+    }
+    const returnTo = searchParams.get('returnTo')
+    navigate(returnTo && returnTo.startsWith('/') ? returnTo : '/', { replace: true })
+  }, [currentUser, navigate, searchParams])
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

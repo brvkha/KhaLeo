@@ -1,4 +1,4 @@
-# Data Model: SM-2 Spaced Repetition and Study Activity Logging
+# Data Model: FSRS v4 Spaced Repetition and Study Activity Logging
 
 ## Relational Entities (Aurora MySQL)
 
@@ -8,19 +8,24 @@
   - `id` (UUID, PK)
   - `userId` (UUID, not null)
   - `cardId` (UUID, not null)
-  - `state` (ENUM: `NEW`, `LEARNING`, `MASTERED`, `REVIEW`, not null)
-  - `intervalDays` (DOUBLE, not null, default 0)
-  - `easeFactor` (DOUBLE, not null, default 2.5)
+  - `state` (ENUM: `NEW`, `LEARNING`, `REVIEW`, `RELEARNING`; historical `MASTERED` supported for backward compatibility)
+  - `fsrsStability` (DOUBLE, not null, default 0)
+  - `fsrsDifficulty` (DOUBLE, not null, default 0)
+  - `fsrsElapsedDays` (INT, not null, default 0)
+  - `fsrsScheduledDays` (INT, not null, default 0)
+  - `fsrsReps` (INT, not null, default 0)
+  - `fsrsLapses` (INT, not null, default 0)
   - `lastReviewedAt` (TIMESTAMP, nullable)
   - `nextReviewAt` (TIMESTAMP, nullable)
-  - `learningStepGoodCount` (INT, not null, default 0)
+  - `learningStepGoodCount` (INT, not null, default 0, retained for compatibility)
   - `createdAt` (TIMESTAMP, not null)
   - `updatedAt` (TIMESTAMP, not null)
 - Validation rules:
-  - `easeFactor >= 1.3` always.
-  - `intervalDays >= 0` always.
+  - `fsrsDifficulty` is clamped to [1, 10] once initialized.
+  - `fsrsStability >= 0.1` for non-new cards once initialized.
+  - `fsrsElapsedDays >= 0`, `fsrsScheduledDays >= 0`, `fsrsReps >= 0`, `fsrsLapses >= 0`.
   - `state = NEW` implies no completed study action yet for that user/card pair.
-  - `learningStepGoodCount` increments for qualifying learning-step `GOOD` ratings and resets on `AGAIN`.
+  - `learningStepGoodCount` is no longer authoritative for scheduling decisions under FSRS.
 - Relationships:
   - Many-to-one with `User`.
   - Many-to-one with `Card`.
@@ -52,29 +57,29 @@
   - `deckId` (string, required)
   - `ratingGiven` (string enum: `AGAIN`, `HARD`, `GOOD`, `EASY`)
   - `timeSpentMs` (number, required)
-  - `newInterval` (number, required)
-  - `newEaseFactor` (number, required)
+  - `scheduledDays` (number, required)
+  - `newStability` (number, required)
+  - `newDifficulty` (number, required)
 - Validation rules:
   - `timeSpentMs >= 0`.
-  - `newEaseFactor >= 1.3`.
+  - `newStability >= 0.1`.
+  - `newDifficulty` is in [1, 10].
   - Immutable after write.
 
 ## State Transition Rules
 
 ### Card state transitions on rating
-- `NEW` + `GOOD` (first learning step) -> `LEARNING`; `nextReviewAt = now + 10 minutes`; `learningStepGoodCount = 1`.
-- `LEARNING` + `GOOD` when `learningStepGoodCount = 1` -> `MASTERED` waiting; `intervalDays = 1`; `nextReviewAt = now + 1 day`.
-- `MASTERED` becomes review-eligible once `nextReviewAt <= now`; treated as due `REVIEW` card for selection.
-- `AGAIN` on non-new active learning/review state -> `LEARNING`; immediate relearning (`intervalDays = 0`); `easeFactor = max(1.3, easeFactor - 0.2)`.
-- `HARD` -> `intervalDays = intervalDays * 1.2`; `easeFactor = max(1.3, easeFactor - 0.15)`.
-- `GOOD` (review behavior) -> `intervalDays = intervalDays * easeFactor`.
-- `EASY` -> `intervalDays = intervalDays * easeFactor * 1.3`; `easeFactor = max(1.3, easeFactor + 0.15)`.
+- `NEW` + `AGAIN|HARD|GOOD` -> `LEARNING`; initialize `D0` and `S0` from FSRS parameter vector.
+- `NEW` + `EASY` -> `REVIEW`; initialize `D0`/`S0` and schedule by calculated days.
+- `REVIEW` + `AGAIN` -> `RELEARNING`; increment `fsrsLapses` and compute stability by FSRS forget formula.
+- `REVIEW` + `HARD|GOOD|EASY` -> `REVIEW`; compute retrievability and update stability by FSRS recall formula.
+- `LEARNING`/`RELEARNING` + `GOOD|EASY` -> `REVIEW`; `AGAIN|HARD` stays in same learning phase.
 
 ## Next-Cards Query Semantics
 
 - Selection order tiers:
   1. Due learning cards (`state = LEARNING` and `nextReviewAt <= now`).
-  2. Due review cards (`state = REVIEW` or `MASTERED` with `nextReviewAt <= now`).
+  2. Due review cards (`state = REVIEW` or legacy `MASTERED` with `nextReviewAt <= now`).
   3. New cards, capped by remaining account daily limit.
 - Pagination:
   - Accept bounded page-size.

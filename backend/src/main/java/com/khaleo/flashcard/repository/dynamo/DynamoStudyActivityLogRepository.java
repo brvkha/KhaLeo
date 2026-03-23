@@ -54,8 +54,9 @@ public class DynamoStudyActivityLogRepository implements StudyActivityLogReposit
                     .deckId(item.containsKey("deckId") ? item.get("deckId").s() : null)
                     .ratingGiven(RatingGiven.valueOf(item.get("ratingGiven").s()))
                     .timeSpentMs(Long.parseLong(item.get("timeSpentMs").n()))
-                    .newInterval(item.containsKey("newInterval") ? Integer.parseInt(item.get("newInterval").n()) : null)
-                    .newEaseFactor(item.containsKey("newEaseFactor") ? item.get("newEaseFactor").n() : null)
+                    .scheduledDays(item.containsKey("scheduledDays") ? Integer.parseInt(item.get("scheduledDays").n()) : null)
+                    .newStability(item.containsKey("newStability") ? item.get("newStability").n() : null)
+                    .newDifficulty(item.containsKey("newDifficulty") ? item.get("newDifficulty").n() : null)
                     .writeStatus(item.containsKey("writeStatus") ? item.get("writeStatus").s() : "UNKNOWN")
                     .build());
         }

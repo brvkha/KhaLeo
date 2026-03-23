@@ -76,7 +76,7 @@ class StudyAsyncLoggingContractTest extends IntegrationPersistenceTestBase {
                 .getContentAsString();
 
         verify(studyActivityLogRepository, timeout(2000).times(1)).save(any());
-        assertThat(response).contains("newInterval");
+        assertThat(response).contains("scheduledDays");
     }
 
     private User saveUser(String email) {

@@ -10,8 +10,9 @@ vi.mock('../../services/studySessionApi', () => ({
     cardId: 'c1',
     state: 'LEARNING',
     nextReviewAt: new Date().toISOString(),
-    newInterval: 0,
-    newEaseFactor: 2.5,
+    scheduledDays: 1,
+    newStability: 2.4,
+    newDifficulty: 5.87,
   })),
 }))
 
@@ -23,17 +24,19 @@ describe('StudySessionPage', () => {
   })
 
   it('reveals answer and submits rating in two-sided flow', async () => {
-    vi.mocked(getNextSessionCards).mockResolvedValue([
-      {
-        cardId: 'c1',
-        deckId: 'd1',
-        frontText: 'Question front',
-        backText: 'Answer back',
-        state: 'NEW',
-        nextReviewDate: null,
-        sourceTier: 'NEW',
-      },
-    ])
+    vi.mocked(getNextSessionCards)
+      .mockResolvedValueOnce([
+        {
+          cardId: 'c1',
+          deckId: 'd1',
+          frontText: 'Question front',
+          backText: 'Answer back',
+          state: 'NEW',
+          nextReviewDate: null,
+          sourceTier: 'NEW',
+        },
+      ])
+      .mockResolvedValueOnce([])
 
     const user = userEvent.setup()
 

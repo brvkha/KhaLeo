@@ -6,7 +6,6 @@ import com.khaleo.flashcard.entity.CardLearningState;
 import com.khaleo.flashcard.entity.enums.CardLearningStateType;
 import com.khaleo.flashcard.model.dynamo.RatingGiven;
 import com.khaleo.flashcard.service.study.StudySchedulerService;
-import java.math.BigDecimal;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,15 +21,16 @@ class StudySchedulerLegacyBehaviorIntegrationTest {
     void shouldPreserveNonNewReviewBehavior() {
         CardLearningState review = CardLearningState.builder()
                 .state(CardLearningStateType.REVIEW)
-                .intervalInDays(5)
-                .easeFactor(BigDecimal.valueOf(2.5))
-                .learningStepGoodCount(1)
+                .fsrsDifficulty(java.math.BigDecimal.valueOf(5.0))
+                .fsrsStability(java.math.BigDecimal.valueOf(4.0))
+                .lastReviewedAt(Instant.now().minusSeconds(24L * 60L * 60L))
                 .build();
 
         var outcome = studySchedulerService.apply(review, RatingGiven.GOOD, Instant.now());
 
         assertThat(outcome.state()).isEqualTo(CardLearningStateType.REVIEW);
-        assertThat(outcome.intervalInDays()).isGreaterThanOrEqualTo(1);
-        assertThat(outcome.easeFactor()).isGreaterThanOrEqualTo(BigDecimal.valueOf(1.3));
+        assertThat(outcome.scheduledDays()).isGreaterThanOrEqualTo(1);
+        assertThat(outcome.stability()).isPositive();
+        assertThat(outcome.difficulty()).isPositive();
     }
 }

@@ -9,6 +9,7 @@ public record RateCardResponse(
         UUID cardId,
         CardLearningStateType state,
         Instant nextReviewAt,
-        Integer newInterval,
-        BigDecimal newEaseFactor) {
+        Integer scheduledDays,
+        BigDecimal newStability,
+        BigDecimal newDifficulty) {
 }

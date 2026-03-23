@@ -77,6 +77,34 @@ public class CardLearningState extends BaseAuditableEntity {
     @Column(name = "learning_step_good_count", nullable = false)
     private Integer learningStepGoodCount = 0;
 
+    @Builder.Default
+    @Column(name = "fsrs_stability", nullable = false, precision = 10, scale = 4)
+    private BigDecimal fsrsStability = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "fsrs_difficulty", nullable = false, precision = 5, scale = 2)
+    private BigDecimal fsrsDifficulty = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Min(0)
+    @Column(name = "fsrs_elapsed_days", nullable = false)
+    private Integer fsrsElapsedDays = 0;
+
+    @Builder.Default
+    @Min(0)
+    @Column(name = "fsrs_scheduled_days", nullable = false)
+    private Integer fsrsScheduledDays = 0;
+
+    @Builder.Default
+    @Min(0)
+    @Column(name = "fsrs_reps", nullable = false)
+    private Integer fsrsReps = 0;
+
+    @Builder.Default
+    @Min(0)
+    @Column(name = "fsrs_lapses", nullable = false)
+    private Integer fsrsLapses = 0;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version;
@@ -94,6 +122,24 @@ public class CardLearningState extends BaseAuditableEntity {
         }
         if (learningStepGoodCount == null) {
             learningStepGoodCount = 0;
+        }
+        if (fsrsStability == null) {
+            fsrsStability = BigDecimal.ZERO;
+        }
+        if (fsrsDifficulty == null) {
+            fsrsDifficulty = BigDecimal.ZERO;
+        }
+        if (fsrsElapsedDays == null) {
+            fsrsElapsedDays = 0;
+        }
+        if (fsrsScheduledDays == null) {
+            fsrsScheduledDays = 0;
+        }
+        if (fsrsReps == null) {
+            fsrsReps = 0;
+        }
+        if (fsrsLapses == null) {
+            fsrsLapses = 0;
         }
     }
 }

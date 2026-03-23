@@ -34,7 +34,7 @@ restart the application and verify all records remain valid and linked.
    **Then** all created records are stored with unique identifiers and can be
    retrieved with relationships intact.
 2. **Given** an existing user-card pair, **When** the learning state is updated,
-   **Then** the state, ease factor, interval, and next review metadata are
+   **Then** the state, stability, difficulty, scheduled-days, and next review metadata are
    persisted for that exact pair without duplicating conflicting active records.
 
 ---
@@ -97,9 +97,9 @@ them while valid records include created/updated audit metadata.
 
 ### Constitutional Impact *(mandatory)*
 
-- **Algorithm Fidelity**: Direct impact. The feature defines persistence for SM-2
-  progression metadata and card states (New, Learning, Mastered (waiting),
-  Review), and stores account-level daily learning limits.
+- **Algorithm Fidelity**: Direct impact. The feature defines persistence for FSRS v4
+  progression metadata and card states (New, Learning, Review,
+  Relearning), and stores account-level daily learning limits.
 - **Security Impact**: Indirect impact. The feature defines sensitive identity and
   credential-related data boundaries and must enforce uniqueness, integrity, and
   auditable timestamps for user records.
@@ -121,10 +121,10 @@ them while valid records include created/updated audit metadata.
 - **FR-003**: System MUST maintain required relationships between user, deck,
   card, and learning-state records so orphaned records are not accepted.
 - **FR-004**: System MUST record and maintain learning-state attributes required
-  for SM-2 progression, including state, ease factor, interval, and next review
+  for FSRS v4 progression, including state, stability, difficulty, scheduled days, and next review
   date.
-- **FR-005**: System MUST support card states New, Learning, Mastered (waiting),
-  and Review as valid domain states.
+- **FR-005**: System MUST support card states New, Learning, Review,
+  and Relearning as valid domain states (while preserving compatibility for historical `MASTERED` records).
 - **FR-006**: System MUST store account-level daily learning limits and apply a
   default value of 9999 when no custom limit is provided; accepted values MUST
   be within 1 to 9999.
@@ -164,7 +164,7 @@ them while valid records include created/updated audit metadata.
   text and media references, where each side must include at least one content
   type.
 - **CardLearningState**: Represents per-user progress for a specific card,
-  including SM-2 progression values and next review timing, with exactly one
+  including FSRS v4 progression values (D/S/scheduling counters) and next review timing, with exactly one
   active record per `(userId, cardId)` pair.
 - **StudyActivityLog**: Represents immutable review events used for analytics,
   troubleshooting, and learning-behavior tracking.
