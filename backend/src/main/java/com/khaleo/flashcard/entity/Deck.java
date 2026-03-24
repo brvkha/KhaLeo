@@ -11,6 +11,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -61,4 +62,10 @@ public class Deck extends BaseAuditableEntity {
     @Builder.Default
     @OneToMany(mappedBy = "deck", fetch = FetchType.LAZY)
     private List<Card> cards = new ArrayList<>();
+
+    @Column(name = "banned_at")
+    private Instant bannedAt;
+
+    @Column(name = "banned_by", columnDefinition = "char(36)")
+    private UUID bannedBy;
 }

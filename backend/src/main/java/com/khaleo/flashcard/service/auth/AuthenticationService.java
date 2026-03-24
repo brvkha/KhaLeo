@@ -31,6 +31,9 @@ public class AuthenticationService {
     @Value("${app.auth.jwt.refresh-token-ttl-days:7}")
     private long refreshTokenTtlDays;
 
+    @Value("${app.auth.email.verification-required:true}")
+    private boolean emailVerificationRequired;
+
     public LoginResult login(String email, String rawPassword) {
         User user = authenticateVerifiedUser(email, rawPassword);
 
@@ -74,7 +77,7 @@ public class AuthenticationService {
             throw invalidCredentials(normalizedEmail);
         }
 
-        if (!Boolean.TRUE.equals(user.getIsEmailVerified())) {
+        if (emailVerificationRequired && !Boolean.TRUE.equals(user.getIsEmailVerified())) {
             authAuditLogger.logEvent("auth_login_blocked_unverified", Map.of("email", normalizedEmail));
             throw new AuthDomainException(
                     HttpStatus.FORBIDDEN,

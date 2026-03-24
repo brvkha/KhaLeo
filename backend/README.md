@@ -34,6 +34,7 @@ Or run manually:
 cd backend
 $env:APP_SEED_LOCAL_DEV_ENABLED = "true"
 $env:APP_SEED_LOCAL_DEV_PASSWORD = "khaleo"
+$env:APP_SEED_LOCAL_DEV_RESET_ON_STARTUP = "true"
 mvn spring-boot:run
 ```
 
@@ -54,6 +55,11 @@ Seed baseline:
 - 8 users
 - 12 decks (6 public + 6 private)
 - 120 cards (10 cards/deck)
+
+Authentication default behavior:
+
+- Email verification is disabled by default (`APP_AUTH_EMAIL_VERIFICATION_REQUIRED=false`).
+- Registration is direct email+password signup without verify-email blocking.
 
 ## Keep Local Database Between Restarts
 

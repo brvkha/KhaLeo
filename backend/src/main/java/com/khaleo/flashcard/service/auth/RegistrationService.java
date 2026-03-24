@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,8 +26,11 @@ public class RegistrationService {
     private final UserRepository userRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final SesEmailService sesEmailService;
+    private final EmailService emailService;
     private final AuthAuditLogger authAuditLogger;
+
+    @Value("${app.auth.email.verification-required:true}")
+    private boolean emailVerificationRequired;
 
     public RegisterResult registerGuest(String email, String rawPassword) {
         String normalizedEmail = normalizeEmail(email);
@@ -42,26 +46,27 @@ public class RegistrationService {
                 .email(normalizedEmail)
                 .passwordHash(passwordEncoder.encode(rawPassword))
                 .role(UserRole.ROLE_USER)
-                .isEmailVerified(Boolean.FALSE)
+                .isEmailVerified(!emailVerificationRequired)  // Auto-verify if verification not required (local dev)
                 .failedLoginAttempts(0)
                 .build();
 
         User savedUser = userRepository.save(user);
 
-        String verificationToken = UUID.randomUUID().toString();
-        EmailVerificationToken token = EmailVerificationToken.builder()
+        if (emailVerificationRequired) {
+            String verificationToken = UUID.randomUUID().toString();
+            EmailVerificationToken token = EmailVerificationToken.builder()
                 .token(verificationToken)
                 .user(savedUser)
                 .expiresAt(Instant.now().plus(24, ChronoUnit.HOURS))
                 .build();
-        emailVerificationTokenRepository.save(token);
-
-        sesEmailService.sendVerificationEmail(savedUser.getEmail(), verificationToken);
+            emailVerificationTokenRepository.save(token);
+            emailService.sendVerificationEmail(savedUser.getEmail(), verificationToken);
+        }
         authAuditLogger.logEvent(
                 "auth_registration_completed",
                 Map.of("userId", savedUser.getId(), "email", savedUser.getEmail()));
 
-        return new RegisterResult(savedUser.getId(), savedUser.getEmail(), true);
+        return new RegisterResult(savedUser.getId(), savedUser.getEmail(), emailVerificationRequired);
     }
 
     public void verifyEmailToken(String tokenValue) {

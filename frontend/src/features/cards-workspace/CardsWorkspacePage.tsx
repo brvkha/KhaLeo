@@ -6,6 +6,7 @@ import {
   deletePrivateDeck,
   listPrivateDecks,
   searchPrivateDeckCards,
+  updatePrivateCard,
   updatePrivateDeck,
 } from '../../services/privateWorkspaceApi'
 
@@ -37,6 +38,9 @@ export function CardsWorkspacePage() {
   const [editingDeckId, setEditingDeckId] = useState<string | null>(null)
   const [editDeckName, setEditDeckName] = useState('')
   const [editDeckDesc, setEditDeckDesc] = useState('')
+  const [editingCardId, setEditingCardId] = useState<string | null>(null)
+  const [editCardFront, setEditCardFront] = useState('')
+  const [editCardBack, setEditCardBack] = useState('')
 
   const loadDecks = async () => {
     try {
@@ -126,6 +130,40 @@ export function CardsWorkspacePage() {
   }
 
   const selectedDeck = decks.find((d) => d.id === selectedDeckId)
+
+  const startEditCard = (card: CardItem) => {
+    setEditingCardId(card.id)
+    setEditCardFront(card.frontText)
+    setEditCardBack(card.backText)
+  }
+
+  const cancelEditCard = () => {
+    setEditingCardId(null)
+    setEditCardFront('')
+    setEditCardBack('')
+  }
+
+  const handleUpdateCard = async () => {
+    if (!editingCardId || !editCardFront.trim() || !editCardBack.trim() || !selectedDeckId) {
+      return
+    }
+
+    try {
+      setError('')
+      await updatePrivateCard({
+        cardId: editingCardId,
+        frontText: editCardFront.trim(),
+        backText: editCardBack.trim(),
+      })
+      const items = await searchPrivateDeckCards(selectedDeckId, search)
+      setCards(items)
+      setSuccess('Card updated')
+      cancelEditCard()
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update card')
+    }
+  }
 
   return (
     <section className="h-screen flex flex-col">
@@ -222,9 +260,17 @@ export function CardsWorkspacePage() {
                         </div>
                       </form>
                     ) : (
-                      <button
+                      <div
                         onClick={() => setSelectedDeckId(deck.id)}
-                        className={`w-full text-left p-3 rounded transition ${
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setSelectedDeckId(deck.id)
+                          }
+                        }}
+                        className={`w-full text-left p-3 rounded transition cursor-pointer ${
                           selectedDeckId === deck.id
                             ? 'bg-blue-100 border border-blue-300'
                             : 'bg-slate-50 border border-transparent hover:bg-slate-100'
@@ -256,7 +302,7 @@ export function CardsWorkspacePage() {
                             Delete
                           </button>
                         </div>
-                      </button>
+                      </div>
                     )}
                   </li>
                 ))}
@@ -335,20 +381,69 @@ export function CardsWorkspacePage() {
                     <tbody>
                       {cards.map((card, idx) => (
                         <tr key={card.id} className={`border-b border-slate-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
-                          <td className="p-3 text-slate-900 truncate">{card.frontText}</td>
-                          <td className="p-3 text-slate-600 truncate">{card.backText}</td>
+                          <td className="p-3 text-slate-900">
+                            {editingCardId === card.id ? (
+                              <input
+                                className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                                value={editCardFront}
+                                onChange={(e) => setEditCardFront(e.target.value)}
+                              />
+                            ) : (
+                              <p className="truncate">{card.frontText}</p>
+                            )}
+                          </td>
+                          <td className="p-3 text-slate-600">
+                            {editingCardId === card.id ? (
+                              <input
+                                className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                                value={editCardBack}
+                                onChange={(e) => setEditCardBack(e.target.value)}
+                              />
+                            ) : (
+                              <p className="truncate">{card.backText}</p>
+                            )}
+                          </td>
                           <td className="p-3 text-right">
-                            <button
-                              className="rounded bg-rose-600 px-3 py-1 text-white text-xs hover:bg-rose-700"
-                              onClick={() => {
-                                void deletePrivateCard(card.id)
-                                  .then(() => searchPrivateDeckCards(selectedDeckId, search))
-                                  .then((items) => setCards(items))
-                                  .catch((err) => setError(err instanceof Error ? err.message : 'Failed to delete card'))
-                              }}
-                            >
-                              Delete
-                            </button>
+                            <div className="flex justify-end gap-2">
+                              {editingCardId === card.id ? (
+                                <>
+                                  <button
+                                    className="rounded bg-blue-600 px-3 py-1 text-white text-xs hover:bg-blue-700"
+                                    onClick={() => {
+                                      void handleUpdateCard()
+                                    }}
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100"
+                                    onClick={cancelEditCard}
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    className="rounded bg-amber-600 px-3 py-1 text-white text-xs hover:bg-amber-700"
+                                    onClick={() => startEditCard(card)}
+                                  >
+                                    Update
+                                  </button>
+                                  <button
+                                    className="rounded bg-rose-600 px-3 py-1 text-white text-xs hover:bg-rose-700"
+                                    onClick={() => {
+                                      void deletePrivateCard(card.id)
+                                        .then(() => searchPrivateDeckCards(selectedDeckId, search))
+                                        .then((items) => setCards(items))
+                                        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to delete card'))
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}

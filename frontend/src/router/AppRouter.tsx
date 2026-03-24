@@ -12,6 +12,7 @@ import { AdminDashboardPage } from '../features/admin/dashboard/AdminDashboardPa
 import { AdminUsersPage } from '../features/admin/users/AdminUsersPage'
 import { AdminDecksPage } from '../features/admin/decks/AdminDecksPage'
 import { AdminCardsPage } from '../features/admin/cards/AdminCardsPage'
+import { AdminModerationAuditPage } from '../features/admin/audit/AdminModerationAuditPage'
 
 function BlockedPage() {
   return (
@@ -54,6 +55,7 @@ export function AppRouter() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="decks" element={<AdminDecksPage />} />
           <Route path="cards" element={<AdminCardsPage />} />
+          <Route path="audit" element={<AdminModerationAuditPage />} />
         </Route>
 
         <Route path="*" element={<Navigate replace to="/" />} />

@@ -28,7 +28,7 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final SesEmailService sesEmailService;
+    private final EmailService emailService;
     private final AuthAuditLogger authAuditLogger;
 
     public void forgotPassword(String email) {
@@ -85,7 +85,7 @@ public class PasswordResetService {
                 .expiresAt(Instant.now().plus(1, ChronoUnit.HOURS))
                 .build();
         passwordResetTokenRepository.save(token);
-        sesEmailService.sendPasswordResetEmail(user.getEmail(), resetTokenValue);
+        emailService.sendPasswordResetEmail(user.getEmail(), resetTokenValue);
     }
 
     private String normalizeEmail(String email) {

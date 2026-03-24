@@ -16,6 +16,7 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -35,14 +36,22 @@ public class LocalDevDataSeeder implements ApplicationRunner {
     private final DeckRepository deckRepository;
     private final CardRepository cardRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     @Value("${app.seed.local-dev.default-password:Passw0rd!}")
     private String defaultPassword;
+
+    @Value("${app.seed.local-dev.reset-on-startup:true}")
+    private boolean resetOnStartup;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         log.info("local-dev seed started");
+
+        if (resetOnStartup) {
+            resetAllDataTables();
+        }
 
         Map<String, User> usersByEmail = seedUsers();
         seedDecksAndCards(usersByEmail);
@@ -51,6 +60,30 @@ public class LocalDevDataSeeder implements ApplicationRunner {
                 userRepository.count(),
                 deckRepository.count(),
                 cardRepository.count());
+    }
+
+    private void resetAllDataTables() {
+        String schema = jdbcTemplate.queryForObject("SELECT DATABASE()", String.class);
+        if (schema == null || schema.isBlank()) {
+            throw new IllegalStateException("Cannot resolve current database schema for local seed reset.");
+        }
+
+        List<String> tables = jdbcTemplate.queryForList(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE' AND table_name <> 'flyway_schema_history'",
+                String.class,
+                schema);
+
+        jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS=0");
+        try {
+            for (String table : tables) {
+                String safeTableName = table.replace("`", "``");
+                jdbcTemplate.execute("TRUNCATE TABLE `" + safeTableName + "`");
+            }
+        } finally {
+            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS=1");
+        }
+
+        log.info("local-dev seed reset completed for schema={} tables={}", schema, tables.size());
     }
 
     private Map<String, User> seedUsers() {

@@ -2,6 +2,7 @@
 $ErrorActionPreference = 'Stop'
 
 $env:APP_SEED_LOCAL_DEV_ENABLED = 'true'
+$env:APP_SEED_LOCAL_DEV_RESET_ON_STARTUP = 'true'
 if (-not $env:APP_SEED_LOCAL_DEV_PASSWORD) {
   $env:APP_SEED_LOCAL_DEV_PASSWORD = 'khaleo'
 }

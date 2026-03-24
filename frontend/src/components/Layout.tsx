@@ -1,9 +1,11 @@
 import { Link, Outlet } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useNotificationStore } from '../store/notificationStore'
 
 export function Layout() {
   const currentUser = useAuthStore((state) => state.currentUser)
   const logout = useAuthStore((state) => state.logout)
+  const pushSuccess = useNotificationStore((state) => state.pushSuccess)
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -26,7 +28,7 @@ export function Layout() {
                 <button
                   className="rounded bg-slate-900 px-3 py-1 text-white"
                   onClick={() => {
-                    void logout()
+                    void logout().then(() => pushSuccess('Đăng xuất thành công.'))
                   }}
                 >
                   Logout

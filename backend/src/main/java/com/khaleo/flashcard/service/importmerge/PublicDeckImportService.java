@@ -27,11 +27,8 @@ public class PublicDeckImportService {
 
     @Transactional
     public ImportResult importPublicDeck(UUID actorId, UUID sourceDeckId) {
-        Deck source = deckRepository.findById(sourceDeckId)
+                Deck source = deckRepository.findByIdAndIsPublicTrueAndBannedAtIsNull(sourceDeckId)
                 .orElseThrow(() -> exceptionMapper.deckNotFound(sourceDeckId));
-        if (!Boolean.TRUE.equals(source.getIsPublic())) {
-            throw exceptionMapper.deckNotPublic(sourceDeckId);
-        }
 
         DeckImportLink existing = deckImportLinkRepository
                 .findBySourceDeckIdAndImportedByUserId(sourceDeckId, actorId)

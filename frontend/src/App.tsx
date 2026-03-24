@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { AppRouter } from './router/AppRouter'
+import { NotificationCenter } from './components/NotificationCenter'
 import { useAuthStore } from './store/authStore'
 
 function App() {
@@ -9,7 +10,12 @@ function App() {
     bootstrap()
   }, [bootstrap])
 
-  return <AppRouter />
+  return (
+    <>
+      <NotificationCenter />
+      <AppRouter />
+    </>
+  )
 }
 
 export default App

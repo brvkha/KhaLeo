@@ -1,5 +1,6 @@
 import { refreshAccessToken } from './authApi'
 import { getAccessToken, persistAuthSession, readAuthSession } from './authSession'
+import { useNotificationStore } from '../store/notificationStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -64,7 +65,15 @@ export async function requestJson<T>(path: string, init?: RequestOptions): Promi
     } catch {
       payload = null
     }
-    throw new Error(parseErrorMessage(payload, response.status))
+    const message = parseErrorMessage(payload, response.status)
+    console.error('api_request_failed', {
+      path,
+      status: response.status,
+      payload,
+      message,
+    })
+    useNotificationStore.getState().pushError(message)
+    throw new Error(message)
   }
 
   if (response.status === 204) {

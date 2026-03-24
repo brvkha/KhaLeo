@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { useNotificationStore } from '../../store/notificationStore'
 
 export function LoginPage() {
   const [email, setEmail] = useState('khaleo@khaleo.app')
@@ -9,6 +10,8 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const login = useAuthStore((state) => state.login)
   const currentUser = useAuthStore((state) => state.currentUser)
+  const pushSuccess = useNotificationStore((state) => state.pushSuccess)
+  const pushError = useNotificationStore((state) => state.pushError)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -28,10 +31,14 @@ export function LoginPage() {
     setError('')
     try {
       await login(email, password)
+      pushSuccess('Đăng nhập thành công.')
       const returnTo = searchParams.get('returnTo')
       navigate(returnTo && returnTo.startsWith('/') ? returnTo : '/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      const message = err instanceof Error ? err.message : 'Login failed'
+      setError(message)
+      pushError(message)
+      console.error('login_failed', err)
     }
   }
 

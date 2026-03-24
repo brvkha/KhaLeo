@@ -6,10 +6,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.khaleo.flashcard.config.observability.NewRelicAuthInstrumentation;
+import com.khaleo.flashcard.config.PaginationConfig;
 import com.khaleo.flashcard.entity.AdminModerationAction;
 import com.khaleo.flashcard.entity.User;
 import com.khaleo.flashcard.entity.enums.UserRole;
 import com.khaleo.flashcard.repository.AdminModerationActionRepository;
+import com.khaleo.flashcard.repository.CardRepository;
+import com.khaleo.flashcard.repository.DeckRepository;
 import com.khaleo.flashcard.repository.UserRepository;
 import com.khaleo.flashcard.service.admin.AdminModerationService;
 import com.khaleo.flashcard.service.persistence.DeckCardAccessGuard;
@@ -34,6 +37,12 @@ class AdminModerationServiceTest {
     private RelationalPersistenceService relationalPersistenceService;
 
     @Mock
+    private DeckRepository deckRepository;
+
+    @Mock
+    private CardRepository cardRepository;
+
+    @Mock
     private AdminModerationActionRepository adminModerationActionRepository;
 
     @Mock
@@ -41,6 +50,9 @@ class AdminModerationServiceTest {
 
     @Mock
     private NewRelicAuthInstrumentation newRelicAuthInstrumentation;
+
+    @Mock
+    private PaginationConfig paginationConfig;
 
     private final PersistenceValidationExceptionMapper exceptionMapper = new PersistenceValidationExceptionMapper();
 
@@ -50,11 +62,14 @@ class AdminModerationServiceTest {
     void setUp() {
         adminModerationService = new AdminModerationService(
                 userRepository,
+            deckRepository,
+            cardRepository,
                 relationalPersistenceService,
                 adminModerationActionRepository,
                 deckCardAccessGuard,
                 exceptionMapper,
-                newRelicAuthInstrumentation);
+            newRelicAuthInstrumentation,
+            paginationConfig);
     }
 
     @Test

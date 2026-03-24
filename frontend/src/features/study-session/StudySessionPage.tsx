@@ -10,7 +10,7 @@ function toApiRating(rating: UiRating): 'AGAIN' | 'HARD' | 'GOOD' | 'EASY' {
   return rating.toUpperCase() as 'AGAIN' | 'HARD' | 'GOOD' | 'EASY'
 }
 
-function formatNextReview(nextReviewAt: string, scheduledDays: number): string {
+function formatNextReview(nextReviewAt: string): string {
   const nextTime = new Date(nextReviewAt)
   const now = new Date()
   const diffMs = nextTime.getTime() - now.getTime()
@@ -197,7 +197,7 @@ export function StudySessionPage() {
                 Rated: <span className="capitalize">{lastRating.state}</span>
               </p>
               <p className="text-sm text-blue-700 mt-1">
-                Next review: {formatNextReview(lastRating.nextReviewAt, lastRating.scheduledDays)}
+                Next review: {formatNextReview(lastRating.nextReviewAt)}
               </p>
             </div>
           ) : null}

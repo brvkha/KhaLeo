@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { deletePrivateDeck, listPrivateDecks } from '../../services/privateWorkspaceApi'
+import { deletePrivateDeck, listPrivateDecks, getDeckStats } from '../../services/privateWorkspaceApi'
+import type { DeckStatsDto } from '../../services/privateWorkspaceApi'
 
 type ViewMode = 'card' | 'table'
 
@@ -8,9 +9,9 @@ export function StudyWorkspacePage() {
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [viewMode, setViewMode] = useState<ViewMode>('card')
+  const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [decks, setDecks] = useState<Array<{ id: string; name: string; description: string | null; isPublic?: boolean }>>([])
-  const [deckStats, setDeckStats] = useState<Record<string, { learning: number; new: number; review: number }>>({})
+  const [deckStats, setDeckStats] = useState<Record<string, DeckStatsDto>>({})
 
   const visibleDecks = useMemo(
     () => decks.filter((deck) => deck.isPublic !== true),
@@ -24,12 +25,17 @@ export function StudyWorkspacePage() {
       const nextDecks = await listPrivateDecks(searchQuery)
       setDecks(nextDecks)
       
-      // TODO: Fetch stats for each deck from backend
-      // For now, using placeholder data
-      const stats: Record<string, { learning: number; new: number; review: number }> = {}
-      nextDecks.forEach((deck) => {
-        stats[deck.id] = { learning: 0, new: 0, review: 0 }
-      })
+      // Fetch stats for each deck from backend
+      const stats: Record<string, DeckStatsDto> = {}
+      for (const deck of nextDecks) {
+        try {
+          stats[deck.id] = await getDeckStats(deck.id)
+        } catch (err) {
+          console.error(`Failed to fetch stats for deck ${deck.id}:`, err)
+          // Set default stats on error
+          stats[deck.id] = { deckId: deck.id, learning: 0, review: 0, new_cards: 0 }
+        }
+      }
       setDeckStats(stats)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load private decks')
@@ -113,7 +119,7 @@ export function StudyWorkspacePage() {
                   <span className="text-slate-700">Review: <span className="font-medium">{deckStats[deck.id]?.review ?? 0}</span></span>
                 </div>
               </div>
-              <p className="text-sm text-slate-500 mt-2">New: {deckStats[deck.id]?.new ?? 0}</p>
+              <p className="text-sm text-slate-500 mt-2">New: {deckStats[deck.id]?.new_cards ?? 0}</p>
               
               <div className="mt-3 flex gap-2">
                 <Link
@@ -164,7 +170,7 @@ export function StudyWorkspacePage() {
                       {deckStats[deck.id]?.review ?? 0}
                     </span>
                   </td>
-                  <td className="p-3 text-center text-slate-600">{deckStats[deck.id]?.new ?? 0}</td>
+                  <td className="p-3 text-center text-slate-600">{deckStats[deck.id]?.new_cards ?? 0}</td>
                   <td className="p-3 text-right">
                     <div className="flex justify-end gap-2">
                       <Link

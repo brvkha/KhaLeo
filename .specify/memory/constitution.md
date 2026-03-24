@@ -1,12 +1,13 @@
 <!--
 Sync Impact Report
-- Version change: template -> 1.0.0
+- Version change: 1.0.0 -> 1.1.0
 - Modified principles:
 	- Template Principle 1 -> I. Technology Standards And Architectural Boundaries
 	- Template Principle 2 -> II. Security By Default
 	- Template Principle 3 -> III. Performance, Scalability, And Observability
 	- Template Principle 4 -> IV. Quality Gates And Testing Discipline
 	- Template Principle 5 -> V. Learning Algorithm Fidelity And Product Rules
+	- Added Principle VI -> User Feedback And Operational Diagnostics
 - Added sections:
 	- Technology Standards
 	- Compliance And Governance
@@ -37,8 +38,9 @@ operability and portfolio credibility.
 
 ### II. Security By Default
 Authentication MUST be stateless and JWT-based with 15-minute access tokens and 7-day
-refresh tokens. Email verification via AWS SES MUST be completed before a user can access
-learning workflows. Authentication flows MUST enforce rate limiting such that five failed
+refresh tokens. Email verification MAY be configured as an optional control and MUST NOT be
+hard-required for standard registration and login in the baseline product flow.
+Authentication flows MUST enforce rate limiting such that five failed
 login attempts trigger a one-day account lockout. User-uploaded media MUST be limited to
 images and audio files up to 5 MB and MUST be uploaded directly to S3 by presigned URL;
 backend services MUST not proxy media uploads. Secrets, signing keys, and infrastructure
@@ -55,6 +57,14 @@ publish CloudWatch alarms for backend 5xx error conditions. APIs, background job
 infrastructure changes MUST be designed so observability is available on day one rather
 than added after incidents. Performance and telemetry are mandatory because the chosen
 portfolio architecture is only credible if it can be operated and diagnosed under load.
+
+### VI. User Feedback And Operational Diagnostics
+All user-triggered actions (for example login, register, import, and moderation actions)
+MUST provide clear success feedback in the UI and MUST surface actionable error messages on
+failure. Success feedback SHOULD use a distinct positive state (green), and failure feedback
+MUST preserve backend error context that can be correlated with logs. Frontend clients MUST
+log unexpected errors with sufficient request context, and backend services MUST continue to
+emit structured errors for incident triage.
 
 ### IV. Quality Gates And Testing Discipline
 All externally exposed backend capabilities MUST be delivered as RESTful APIs, and every
@@ -96,7 +106,7 @@ preference.
 ## Compliance And Governance
 
 - Specifications MUST identify any impact on SM-2 scheduling rules, card-state transitions,
-	daily learning limits, JWT flows, email verification, media upload paths, and required
+	daily learning limits, JWT flows, optional email verification behavior, media upload paths, and required
 	observability.
 - Implementation plans MUST include a constitution check covering stack compliance,
 	security controls, observability, pagination, migration strategy, and test coverage.
@@ -122,4 +132,4 @@ reviews MUST verify SM-2 fidelity, account-level learning-limit enforcement, sec
 requirements, observability, testing evidence, and infrastructure alignment before work is
 approved for production.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-13 | **Last Amended**: 2026-03-13
+**Version**: 1.1.0 | **Ratified**: 2026-03-13 | **Last Amended**: 2026-03-24

@@ -18,16 +18,26 @@ public interface DeckRepository extends JpaRepository<Deck, UUID> {
 
     Page<Deck> findByIsPublicTrue(Pageable pageable);
 
-    Page<Deck> findByAuthorIdAndIsPublic(UUID authorId, Boolean isPublic, Pageable pageable);
+    @Query("""
+            select d from Deck d
+            where d.author.id = :authorId
+                and d.isPublic = :isPublic
+                and d.bannedAt is null
+            """)
+    Page<Deck> findByAuthorIdAndIsPublic(
+            @Param("authorId") UUID authorId,
+            @Param("isPublic") Boolean isPublic,
+            Pageable pageable);
 
-        Optional<Deck> findByIdAndIsPublicTrue(UUID id);
+    Optional<Deck> findByIdAndIsPublicTrueAndBannedAtIsNull(UUID id);
 
-        @Query("""
-                        select d from Deck d
-                        where d.isPublic = true
-                            and (:queryText is null or lower(coalesce(d.name, '')) like lower(concat('%', :queryText, '%')))
-                        """)
-        Page<Deck> searchPublicDecks(@Param("queryText") String queryText, Pageable pageable);
+    @Query("""
+            select d from Deck d
+            where d.isPublic = true
+                and d.bannedAt is null
+                and (:queryText is null or lower(coalesce(d.name, '')) like lower(concat('%', :queryText, '%')))
+            """)
+    Page<Deck> searchPublicDecks(@Param("queryText") String queryText, Pageable pageable);
 
     Page<Deck> findByAuthorIdAndIsPublicFalse(UUID authorId, Pageable pageable);
 
@@ -35,10 +45,19 @@ public interface DeckRepository extends JpaRepository<Deck, UUID> {
             select d from Deck d
             where d.author.id = :authorId
                 and d.isPublic = false
+            and d.bannedAt is null
                 and (:queryText is null or lower(coalesce(d.name, '')) like lower(concat('%', :queryText, '%')))
             """)
     Page<Deck> findPrivateOwnedDecks(
             @Param("authorId") UUID authorId,
             @Param("queryText") String queryText,
             Pageable pageable);
+
+        @Query("""
+            select d from Deck d
+            where (:queryText is null
+            or lower(coalesce(d.name, '')) like lower(concat('%', :queryText, '%'))
+                    or lower(coalesce(d.author.email, '')) like lower(concat('%', :queryText, '%')))
+            """)
+        Page<Deck> searchForAdmin(@Param("queryText") String queryText, Pageable pageable);
 }

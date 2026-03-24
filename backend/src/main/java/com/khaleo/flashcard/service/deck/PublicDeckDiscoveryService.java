@@ -34,7 +34,7 @@ public class PublicDeckDiscoveryService {
 
     @Transactional(readOnly = true)
     public PublicDeckDetailResponse getPublicDeckDetail(UUID deckId) {
-        Deck deck = deckRepository.findByIdAndIsPublicTrue(deckId)
+        Deck deck = deckRepository.findByIdAndIsPublicTrueAndBannedAtIsNull(deckId)
                 .orElseThrow(() -> exceptionMapper.deckNotFound(deckId));
 
         List<PublicDeckDetailResponse.CardPreviewItem> previews = cardRepository

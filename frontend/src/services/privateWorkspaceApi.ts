@@ -96,3 +96,21 @@ export async function deletePrivateCard(cardId: string): Promise<void> {
     method: 'DELETE',
   })
 }
+
+export async function updatePrivateCard(payload: {
+  cardId: string
+  frontText: string
+  backText: string
+}): Promise<void> {
+  await requestJson(`/api/v1/cards/${payload.cardId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      frontText: payload.frontText,
+      backText: payload.backText,
+    }),
+  })
+}
+
+export async function getDeckStats(deckId: string): Promise<DeckStatsDto> {
+  return await requestJson<DeckStatsDto>(`/api/v1/private/decks/${deckId}/stats`)
+}
