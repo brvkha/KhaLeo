@@ -2,13 +2,19 @@ package com.khaleo.flashcard.controller.study;
 
 import com.khaleo.flashcard.model.study.NextCardsPageResponse;
 import com.khaleo.flashcard.model.study.NextCardsRequest;
+import com.khaleo.flashcard.model.study.AlgorithmWeightsRequest;
+import com.khaleo.flashcard.model.study.AlgorithmWeightsResponse;
 import com.khaleo.flashcard.model.study.RateCardRequest;
+import com.khaleo.flashcard.model.study.RateCardPreviewResponse;
 import com.khaleo.flashcard.model.study.RateCardResponse;
 import com.khaleo.flashcard.service.auth.VerifiedAccountGuard;
 import com.khaleo.flashcard.service.persistence.DeckCardAccessGuard;
 import com.khaleo.flashcard.service.study.NextCardsService;
+import com.khaleo.flashcard.service.study.SpacedRepetitionService;
 import com.khaleo.flashcard.service.study.StudyRatingService;
 import jakarta.validation.Valid;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +34,7 @@ public class StudySessionController {
     private final StudyRatingService studyRatingService;
     private final DeckCardAccessGuard deckCardAccessGuard;
     private final VerifiedAccountGuard verifiedAccountGuard;
+    private final SpacedRepetitionService spacedRepetitionService;
 
     @GetMapping("/decks/{deckId}/next-cards")
     public NextCardsPageResponse nextCards(
@@ -46,5 +53,46 @@ public class StudySessionController {
         UUID actorId = deckCardAccessGuard.requireAuthenticatedUserId("rate", "study-session", cardId.toString());
         verifiedAccountGuard.requireVerified(actorId, "rate", "study-session", cardId.toString());
         return studyRatingService.rateCard(cardId, request);
+    }
+
+    @GetMapping("/cards/{cardId}/preview-ratings")
+    public RateCardPreviewResponse previewCardRatings(@PathVariable("cardId") UUID cardId) {
+        UUID actorId = deckCardAccessGuard.requireAuthenticatedUserId("preview", "study-session", cardId.toString());
+        verifiedAccountGuard.requireVerified(actorId, "preview", "study-session", cardId.toString());
+        return studyRatingService.previewCardRatings(cardId);
+    }
+
+    @GetMapping("/algorithm-weights")
+    public AlgorithmWeightsResponse getAlgorithmWeights() {
+        UUID actorId = deckCardAccessGuard.requireAuthenticatedUserId("read", "study-settings", "algorithm-weights");
+        deckCardAccessGuard.ensureAdmin(actorId, "read", "study-settings", "algorithm-weights");
+        verifiedAccountGuard.requireVerified(actorId, "read", "study-settings", "algorithm-weights");
+        return new AlgorithmWeightsResponse(toList(spacedRepetitionService.getWeights()));
+    }
+
+    @PostMapping("/algorithm-weights")
+    public AlgorithmWeightsResponse updateAlgorithmWeights(
+            @Valid @RequestBody AlgorithmWeightsRequest request) {
+        UUID actorId = deckCardAccessGuard.requireAuthenticatedUserId("update", "study-settings", "algorithm-weights");
+        deckCardAccessGuard.ensureAdmin(actorId, "update", "study-settings", "algorithm-weights");
+        verifiedAccountGuard.requireVerified(actorId, "update", "study-settings", "algorithm-weights");
+        double[] updated = spacedRepetitionService.updateWeights(toArray(request.weights()));
+        return new AlgorithmWeightsResponse(toList(updated));
+    }
+
+    @PostMapping("/algorithm-weights/reset")
+    public AlgorithmWeightsResponse resetAlgorithmWeights() {
+        UUID actorId = deckCardAccessGuard.requireAuthenticatedUserId("reset", "study-settings", "algorithm-weights");
+        deckCardAccessGuard.ensureAdmin(actorId, "reset", "study-settings", "algorithm-weights");
+        verifiedAccountGuard.requireVerified(actorId, "reset", "study-settings", "algorithm-weights");
+        return new AlgorithmWeightsResponse(toList(spacedRepetitionService.resetWeights()));
+    }
+
+    private List<Double> toList(double[] weights) {
+        return Arrays.stream(weights).boxed().toList();
+    }
+
+    private double[] toArray(List<Double> weights) {
+        return weights.stream().mapToDouble(Double::doubleValue).toArray();
     }
 }

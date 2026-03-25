@@ -8,9 +8,19 @@ import com.khaleo.flashcard.controller.admin.dto.AdminUserModerationItemResponse
 import com.khaleo.flashcard.controller.card.dto.CardResponse;
 import com.khaleo.flashcard.controller.common.PagedResponse;
 import com.khaleo.flashcard.entity.Card;
+import com.khaleo.flashcard.entity.CardLearningState;
+import com.khaleo.flashcard.entity.enums.CardLearningStateType;
+import com.khaleo.flashcard.model.dynamo.RatingGiven;
+import com.khaleo.flashcard.model.study.FSRSTestRequest;
+import com.khaleo.flashcard.model.study.FSRSTestResponse;
 import com.khaleo.flashcard.service.admin.AdminModerationService;
 import com.khaleo.flashcard.service.admin.AdminStatsService;
+import com.khaleo.flashcard.service.study.SpacedRepetitionService;
+import com.khaleo.flashcard.service.study.StudySchedulerService;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -35,6 +45,7 @@ public class AdminController {
 
     private final AdminStatsService adminStatsService;
     private final AdminModerationService adminModerationService;
+    private final StudySchedulerService studySchedulerService;
 
     @GetMapping("/stats")
     @PreAuthorize("hasRole('ADMIN')")
@@ -165,5 +176,123 @@ public class AdminController {
     public CardResponse updateCard(@PathVariable("cardId") UUID cardId, @Valid @RequestBody AdminCardUpdateRequest request) {
         Card updated = adminModerationService.updateCard(cardId, request);
         return CardResponse.from(updated);
+    }
+
+    @PostMapping("/fsrs-test")
+    @PreAuthorize("hasRole('ADMIN')")
+    public FSRSTestResponse testFSRSAlgorithm(@Valid @RequestBody FSRSTestRequest request) {
+        Instant now = Instant.now();
+        
+        // Calculate lastReviewedAt based on elapsedDays
+        // elapsedDays can be fractional (e.g., 0.007 days = ~10 minutes)
+        // Convert to total seconds for accurate Instant calculation
+        BigDecimal elapsedSeconds = request.elapsedDays().multiply(BigDecimal.valueOf(86400)); // 24*60*60
+        Instant lastReviewedAt = now.minusSeconds(elapsedSeconds.longValue());
+
+        // Determine state: use provided state or infer from reps (fallback for backward compatibility)
+        CardLearningStateType stateType;
+        if (request.state() != null && !request.state().isBlank()) {
+            try {
+                stateType = CardLearningStateType.valueOf(request.state().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Fallback: infer from reps if invalid state provided
+                stateType = request.reps() > 0 ? CardLearningStateType.REVIEW : CardLearningStateType.NEW;
+            }
+        } else {
+            // Fallback: infer from reps if no state provided
+            stateType = request.reps() > 0 ? CardLearningStateType.REVIEW : CardLearningStateType.NEW;
+        }
+
+        // Create temporary card learning state for each rating calculation
+        CardLearningState testState = CardLearningState.builder()
+                .fsrsStability(request.stability())
+                .fsrsDifficulty(request.difficulty())
+                .fsrsReps(request.reps())
+                .fsrsLapses(request.lapses())
+            .learningStepGoodCount(defaultZero(request.learningStepGoodCount()))
+                .lastReviewedAt(lastReviewedAt)
+                .state(stateType)
+                .build();
+
+        // Calculate outcomes for all 4 ratings
+        SpacedRepetitionService.RatingOutcome againOutcome = studySchedulerService.apply(
+                copyCardState(testState), RatingGiven.AGAIN, now);
+        SpacedRepetitionService.RatingOutcome hardOutcome = studySchedulerService.apply(
+                copyCardState(testState), RatingGiven.HARD, now);
+        SpacedRepetitionService.RatingOutcome goodOutcome = studySchedulerService.apply(
+                copyCardState(testState), RatingGiven.GOOD, now);
+        SpacedRepetitionService.RatingOutcome easyOutcome = studySchedulerService.apply(
+                copyCardState(testState), RatingGiven.EASY, now);
+
+        return new FSRSTestResponse(
+                new FSRSTestResponse.FSRSRatingResult(
+                        "AGAIN",
+                        againOutcome.nextReviewAt(),
+                        againOutcome.scheduledDays(),
+                        againOutcome.stability().doubleValue(),
+                        againOutcome.difficulty().doubleValue(),
+                        againOutcome.reps(),
+                        againOutcome.lapses(),
+                    againOutcome.state().toString(),
+                    nextLearningStepGoodCount(testState, RatingGiven.AGAIN, againOutcome)),
+                new FSRSTestResponse.FSRSRatingResult(
+                        "HARD",
+                        hardOutcome.nextReviewAt(),
+                        hardOutcome.scheduledDays(),
+                        hardOutcome.stability().doubleValue(),
+                        hardOutcome.difficulty().doubleValue(),
+                        hardOutcome.reps(),
+                        hardOutcome.lapses(),
+                    hardOutcome.state().toString(),
+                    nextLearningStepGoodCount(testState, RatingGiven.HARD, hardOutcome)),
+                new FSRSTestResponse.FSRSRatingResult(
+                        "GOOD",
+                        goodOutcome.nextReviewAt(),
+                        goodOutcome.scheduledDays(),
+                        goodOutcome.stability().doubleValue(),
+                        goodOutcome.difficulty().doubleValue(),
+                        goodOutcome.reps(),
+                        goodOutcome.lapses(),
+                    goodOutcome.state().toString(),
+                    nextLearningStepGoodCount(testState, RatingGiven.GOOD, goodOutcome)),
+                new FSRSTestResponse.FSRSRatingResult(
+                        "EASY",
+                        easyOutcome.nextReviewAt(),
+                        easyOutcome.scheduledDays(),
+                        easyOutcome.stability().doubleValue(),
+                        easyOutcome.difficulty().doubleValue(),
+                        easyOutcome.reps(),
+                        easyOutcome.lapses(),
+                    easyOutcome.state().toString(),
+                    nextLearningStepGoodCount(testState, RatingGiven.EASY, easyOutcome)));
+    }
+
+            private int nextLearningStepGoodCount(
+                CardLearningState current,
+                RatingGiven rating,
+                SpacedRepetitionService.RatingOutcome outcome) {
+            if (rating == RatingGiven.GOOD
+                && (outcome.state() == CardLearningStateType.LEARNING
+                || outcome.state() == CardLearningStateType.RELEARNING)) {
+                return defaultZero(current.getLearningStepGoodCount()) + 1;
+            }
+            return 0;
+            }
+
+            private int defaultZero(Integer value) {
+            return value == null ? 0 : value;
+            }
+
+    private CardLearningState copyCardState(CardLearningState original) {
+        return CardLearningState.builder()
+                .state(original.getState())
+                .learningStepGoodCount(original.getLearningStepGoodCount())
+                .fsrsStability(original.getFsrsStability())
+                .fsrsDifficulty(original.getFsrsDifficulty())
+                .fsrsReps(original.getFsrsReps())
+                .fsrsLapses(original.getFsrsLapses())
+                .lastReviewedAt(original.getLastReviewedAt())
+                .fsrsElapsedDays(original.getFsrsElapsedDays())
+                .build();
     }
 }

@@ -49,13 +49,9 @@ class AuthPasswordResetContractTest extends IntegrationPersistenceTestBase {
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
-    @MockBean
-    private SesEmailService sesEmailService;
-
     @BeforeEach
     void setUp() {
-        doNothing().when(sesEmailService).sendVerificationEmail(anyString(), anyString());
-        doNothing().when(sesEmailService).sendPasswordResetEmail(anyString(), anyString());
+        // No need to mock - MockEmailService is now @Primary and logs emails instead
     }
 
     @Test

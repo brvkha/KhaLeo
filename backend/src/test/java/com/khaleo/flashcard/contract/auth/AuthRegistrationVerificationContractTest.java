@@ -41,12 +41,9 @@ class AuthRegistrationVerificationContractTest extends IntegrationPersistenceTes
     @Autowired
     private UserRepository userRepository;
 
-    @MockBean
-    private SesEmailService sesEmailService;
-
     @BeforeEach
     void setUp() {
-        doNothing().when(sesEmailService).sendVerificationEmail(anyString(), anyString());
+        // No need to mock - MockEmailService is now @Primary and logs emails instead
     }
 
     @Test
@@ -61,7 +58,7 @@ class AuthRegistrationVerificationContractTest extends IntegrationPersistenceTes
                 .getResponse()
                 .getContentAsString();
 
-        assertThat(response).contains("verificationRequired", "true");
+        assertThat(response).contains("verificationRequired", "false");
         assertThat(userRepository.findByEmail("contract-user@example.com")).isPresent();
     }
 

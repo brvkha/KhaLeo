@@ -3,7 +3,10 @@ package com.khaleo.flashcard.service.study;
 import com.khaleo.flashcard.config.observability.NewRelicDeckMediaInstrumentation;
 import com.khaleo.flashcard.entity.Card;
 import com.khaleo.flashcard.entity.CardLearningState;
+import com.khaleo.flashcard.entity.enums.CardLearningStateType;
+import com.khaleo.flashcard.model.dynamo.RatingGiven;
 import com.khaleo.flashcard.model.study.RateCardRequest;
+import com.khaleo.flashcard.model.study.RateCardPreviewResponse;
 import com.khaleo.flashcard.model.study.RateCardResponse;
 import com.khaleo.flashcard.repository.CardLearningStateRepository;
 import com.khaleo.flashcard.repository.UserRepository;
@@ -71,7 +74,13 @@ public class StudyRatingService {
                         current.setFsrsElapsedDays(outcome.elapsedDays());
                         current.setFsrsReps(outcome.reps());
                         current.setFsrsLapses(outcome.lapses());
-                        current.setLearningStepGoodCount(0);
+                        if (request.rating() == RatingGiven.GOOD
+                                && (outcome.state() == CardLearningStateType.LEARNING
+                                || outcome.state() == CardLearningStateType.RELEARNING)) {
+                            current.setLearningStepGoodCount(defaultZero(current.getLearningStepGoodCount()) + 1);
+                        } else {
+                            current.setLearningStepGoodCount(0);
+                        }
 
                         return cardLearningStateRepository.saveAndFlush(current);
                     });
@@ -107,5 +116,54 @@ public class StudyRatingService {
             log.error("event=study_rating_failed userId={} cardId={} reason={}", userId, cardId, ex.getMessage(), ex);
             throw ex;
         }
+    }
+
+        @Transactional(readOnly = true)
+        public RateCardPreviewResponse previewCardRatings(UUID cardId) {
+        StudyAccessService.CardAccessContext accessContext = studyAccessService.requireCardAccess(cardId);
+        UUID userId = accessContext.actorId();
+        Instant now = Instant.now();
+
+        CardLearningState current = cardLearningStateRepository
+            .findByUserIdAndCardId(userId, cardId)
+            .orElseGet(() -> CardLearningState.builder()
+                .state(CardLearningStateType.NEW)
+                .learningStepGoodCount(0)
+                .build());
+
+        SpacedRepetitionService.RatingOutcome againOutcome = studySchedulerService.apply(copyCardState(current), RatingGiven.AGAIN, now);
+        SpacedRepetitionService.RatingOutcome hardOutcome = studySchedulerService.apply(copyCardState(current), RatingGiven.HARD, now);
+        SpacedRepetitionService.RatingOutcome goodOutcome = studySchedulerService.apply(copyCardState(current), RatingGiven.GOOD, now);
+        SpacedRepetitionService.RatingOutcome easyOutcome = studySchedulerService.apply(copyCardState(current), RatingGiven.EASY, now);
+
+        return new RateCardPreviewResponse(
+            toPreview(againOutcome),
+            toPreview(hardOutcome),
+            toPreview(goodOutcome),
+            toPreview(easyOutcome));
+        }
+
+    private int defaultZero(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private RateCardPreviewResponse.RatingPreview toPreview(SpacedRepetitionService.RatingOutcome outcome) {
+        return new RateCardPreviewResponse.RatingPreview(
+                outcome.nextReviewAt(),
+                outcome.scheduledDays(),
+                outcome.state().name());
+    }
+
+    private CardLearningState copyCardState(CardLearningState original) {
+        return CardLearningState.builder()
+                .state(original.getState())
+                .learningStepGoodCount(defaultZero(original.getLearningStepGoodCount()))
+                .fsrsStability(original.getFsrsStability())
+                .fsrsDifficulty(original.getFsrsDifficulty())
+                .fsrsReps(original.getFsrsReps())
+                .fsrsLapses(original.getFsrsLapses())
+                .lastReviewedAt(original.getLastReviewedAt())
+                .fsrsElapsedDays(original.getFsrsElapsedDays())
+                .build();
     }
 }

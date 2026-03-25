@@ -27,12 +27,9 @@ class UnverifiedLoginBlockedIT extends IntegrationPersistenceTestBase {
     @Autowired
     private AuthenticationService authenticationService;
 
-    @MockBean
-    private com.khaleo.flashcard.service.auth.SesEmailService sesEmailService;
-
     @BeforeEach
     void setUp() {
-        doNothing().when(sesEmailService).sendVerificationEmail(anyString(), anyString());
+        // No need to mock - MockEmailService is now @Primary and logs emails instead
     }
 
     @Test

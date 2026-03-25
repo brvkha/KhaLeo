@@ -75,8 +75,8 @@ class DeckManagementContractTest extends IntegrationPersistenceTestBase {
         createDeck(owner, "Public Deck", true);
         createDeck(owner, "Private Deck", false);
 
-        String response = mockMvc.perform(get("/api/v1/decks")
-                        .queryParam("isPublic", "true"))
+        String response = mockMvc.perform(get("/api/v1/public/decks")
+                        .queryParam("q", ""))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()

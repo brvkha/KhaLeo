@@ -21,12 +21,32 @@ class SpacedRepetitionServiceTest {
                 .state(CardLearningStateType.NEW)
                 .build();
 
-        SpacedRepetitionService.RatingOutcome outcome = service.apply(state, RatingGiven.GOOD, Instant.now());
+        Instant now = Instant.now();
+        SpacedRepetitionService.RatingOutcome outcome = service.apply(state, RatingGiven.GOOD, now);
 
         assertThat(outcome.state()).isEqualTo(CardLearningStateType.LEARNING);
-        assertThat(outcome.scheduledDays()).isGreaterThanOrEqualTo(1);
+        assertThat(outcome.scheduledDays()).isZero();
+        assertThat(Duration.between(now, outcome.nextReviewAt()).toMinutes()).isBetween(10L, 11L);
         assertThat(outcome.stability()).isPositive();
         assertThat(outcome.difficulty()).isBetween(BigDecimal.ONE, BigDecimal.TEN);
+    }
+
+    @Test
+    void shouldGraduateLearningCardToReviewOnSecondGood() {
+        CardLearningState state = CardLearningState.builder()
+                .state(CardLearningStateType.LEARNING)
+                .learningStepGoodCount(1)
+                .fsrsDifficulty(BigDecimal.valueOf(5.5))
+                .fsrsStability(BigDecimal.valueOf(2.5))
+                .lastReviewedAt(Instant.now().minusSeconds(24L * 60L * 60L))
+                .build();
+
+        Instant now = Instant.now();
+        SpacedRepetitionService.RatingOutcome outcome = service.apply(state, RatingGiven.GOOD, now);
+
+        assertThat(outcome.state()).isEqualTo(CardLearningStateType.REVIEW);
+        assertThat(outcome.scheduledDays()).isGreaterThanOrEqualTo(1);
+        assertThat(Duration.between(now, outcome.nextReviewAt()).toDays()).isGreaterThanOrEqualTo(1);
     }
 
     @Test

@@ -83,12 +83,13 @@ class CardManagementSearchContractTest extends IntegrationPersistenceTestBase {
     @Test
     void shouldSearchCardsInDeckWithExpectedSemantics() throws Exception {
         User owner = createUser("contract-card-search@example.com", UserRole.ROLE_USER);
-        Deck deck = createDeck(owner, "Language", true);
+        Deck deck = createDeck(owner, "Language", false);
 
         createCard(deck, "Xin chao", "Hello");
         createCard(deck, "Tam biet", "Goodbye");
 
-        String response = mockMvc.perform(get("/api/v1/decks/{deckId}/cards/search", deck.getId())
+        String response = mockMvc.perform(get("/api/v1/private/decks/{deckId}/cards/search", deck.getId())
+                        .header("Authorization", bearerFor(owner))
                         .queryParam("frontText", "xin"))
                 .andExpect(status().isOk())
                 .andReturn()

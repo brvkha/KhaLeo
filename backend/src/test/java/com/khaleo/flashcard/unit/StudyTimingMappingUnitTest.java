@@ -30,7 +30,8 @@ class StudyTimingMappingUnitTest {
         Instant now = Instant.now();
         var outcome = policy.apply(state, RatingGiven.HARD, now);
         assertThat(outcome.state()).isEqualTo(CardLearningStateType.LEARNING);
-        assertThat(Duration.between(now, outcome.nextReviewAt()).toDays()).isGreaterThanOrEqualTo(1);
+        assertThat(outcome.scheduledDays()).isZero();
+        assertThat(Duration.between(now, outcome.nextReviewAt()).toMinutes()).isBetween(5L, 6L);
     }
 
     @Test
@@ -39,7 +40,8 @@ class StudyTimingMappingUnitTest {
         Instant now = Instant.now();
         var outcome = policy.apply(state, RatingGiven.GOOD, now);
         assertThat(outcome.state()).isEqualTo(CardLearningStateType.LEARNING);
-        assertThat(Duration.between(now, outcome.nextReviewAt()).toDays()).isGreaterThanOrEqualTo(1);
+        assertThat(outcome.scheduledDays()).isZero();
+        assertThat(Duration.between(now, outcome.nextReviewAt()).toMinutes()).isBetween(10L, 11L);
     }
 
     @Test

@@ -77,6 +77,13 @@ public class DeckCardAccessGuard {
         }
     }
 
+    public void ensureAdmin(UUID actorId, String operation, String resourceType, String resourceKey) {
+        User user = userRepository.findById(actorId).orElse(null);
+        if (user == null || user.getRole() != UserRole.ROLE_ADMIN) {
+            throw exceptionMapper.authorizationDenied(operation, resourceType, resourceKey);
+        }
+    }
+
     public boolean isOwnerOrAdmin(UUID actorId, UUID ownerId) {
         if (actorId.equals(ownerId)) {
             return true;

@@ -6,26 +6,55 @@ import com.khaleo.flashcard.model.dynamo.RatingGiven;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class SpacedRepetitionService {
 
-    private static final double[] W = {
-            0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01,
-            1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61
-    };
-    private static final double REQUEST_RETENTION = 0.9;
+        private static final double[] DEFAULT_WEIGHTS = {
+            1.2682, 1.2682, 6.4994, 16.1563,
+            6.9135, 0.6470, 2.5935, 0.0010,
+            1.7036, 0.1711, 1.1668, 2.0287,
+            0.0767, 0.4215, 2.5117, 0.2713,
+            3.6253, 0.4372, 0.0468
+        };
+        private static final double REQUEST_RETENTION = 0.9;
     private static final long MAX_INTERVAL = 36500;
     private static final long AGAIN_REVIEW_DELAY_MINUTES = 1;
+    private static final long HARD_LEARNING_DELAY_MINUTES = 5;
+    private static final long GOOD_LEARNING_DELAY_MINUTES = 10;
+
+    private final StudyAlgorithmSettingsService studyAlgorithmSettingsService;
+
+    private volatile double[] weights = DEFAULT_WEIGHTS.clone();
+
+    @Autowired
+    public SpacedRepetitionService(StudyAlgorithmSettingsService studyAlgorithmSettingsService) {
+        this.studyAlgorithmSettingsService = studyAlgorithmSettingsService;
+    }
+
+    // Test-only constructor for unit tests that instantiate this service directly.
+    public SpacedRepetitionService() {
+        this.studyAlgorithmSettingsService = null;
+    }
+
+    @PostConstruct
+    void initializeWeights() {
+        if (studyAlgorithmSettingsService == null) {
+            return;
+        }
+        weights = studyAlgorithmSettingsService.loadOrDefault(DEFAULT_WEIGHTS);
+    }
 
     public RatingOutcome apply(CardLearningState currentState, RatingGiven rating, Instant now) {
+        double[] w = weights;
         CardLearningStateType state = normalizeState(currentState.getState());
-        int elapsedDays = calculateElapsedDays(currentState, now, state);
+        double elapsedDays = calculateElapsedDays(currentState, now, state);  // Changed from int to double
         int reps = defaultZero(currentState.getFsrsReps()) + 1;
         int lapses = defaultZero(currentState.getFsrsLapses());
+        int learningStepGoodCount = defaultZero(currentState.getLearningStepGoodCount());
 
         double currentStability = safePositive(currentState.getFsrsStability(), 0.0);
         double currentDifficulty = safePositive(currentState.getFsrsDifficulty(), 0.0);
@@ -35,41 +64,67 @@ public class SpacedRepetitionService {
         double nextStability;
 
         if (state == CardLearningStateType.NEW || currentDifficulty <= 0 || currentStability <= 0) {
-            nextDifficulty = initDifficulty(rating);
-            nextStability = initStability(rating);
+            nextDifficulty = initDifficulty(rating, w);
+            nextStability = initStability(rating, w);
             nextState = rating == RatingGiven.EASY ? CardLearningStateType.REVIEW : CardLearningStateType.LEARNING;
         } else if (state == CardLearningStateType.REVIEW) {
             double retrievability = calculateRetrievability(elapsedDays, currentStability);
-            nextDifficulty = nextDifficulty(currentDifficulty, rating);
+            nextDifficulty = nextDifficulty(currentDifficulty, rating, w);
             if (rating == RatingGiven.AGAIN) {
                 lapses += 1;
-                nextStability = forgetStability(nextDifficulty, currentStability, retrievability);
+                nextStability = forgetStability(nextDifficulty, currentStability, retrievability, w);
                 nextState = CardLearningStateType.RELEARNING;
             } else {
-                nextStability = recallStability(nextDifficulty, currentStability, retrievability, rating);
+                nextStability = recallStability(nextDifficulty, currentStability, retrievability, rating, w);
                 nextState = CardLearningStateType.REVIEW;
             }
         } else {
-            // Learning/relearning cards can start without stable historical R; use a conservative pseudo-recall.
-            double pseudoRetrievability = 0.9;
-            nextDifficulty = nextDifficulty(currentDifficulty, rating);
+            // For learning/relearning, derive retrievability from real elapsed time to avoid unrealistic jumps.
+            double learningRetrievability = Math.min(
+                    0.99,
+                    calculateRetrievability(elapsedDays, Math.max(currentStability, 0.1)));
+            nextDifficulty = nextDifficulty(currentDifficulty, rating, w);
             if (rating == RatingGiven.AGAIN) {
-                nextStability = Math.max(0.1, initStability(RatingGiven.AGAIN));
+                nextStability = Math.max(0.1, initStability(RatingGiven.AGAIN, w));
                 nextState = CardLearningStateType.RELEARNING;
             } else if (rating == RatingGiven.HARD) {
-                nextStability = Math.max(0.1, currentStability * 0.85);
+                nextStability = sameDayStability(currentStability, rating, w);
                 nextState = state;
+            } else if (rating == RatingGiven.GOOD) {
+                if (state == CardLearningStateType.LEARNING || learningStepGoodCount >= 1) {
+                    nextStability = sameDayStability(currentStability, rating, w);
+                    nextState = CardLearningStateType.REVIEW;
+                } else {
+                    nextStability = sameDayStability(currentStability, rating, w);
+                    nextState = state;
+                }
             } else {
-                nextStability = recallStability(nextDifficulty, currentStability, pseudoRetrievability, rating);
+                nextStability = sameDayStability(currentStability, rating, w);
                 nextState = CardLearningStateType.REVIEW;
             }
         }
 
         boolean scheduleShortAgain = rating == RatingGiven.AGAIN;
-        long scheduledDays = scheduleShortAgain ? 0 : calculateInterval(nextStability);
-        Instant nextReviewAt = scheduleShortAgain
-            ? now.plus(AGAIN_REVIEW_DELAY_MINUTES, ChronoUnit.MINUTES)
-            : now.plus(scheduledDays, ChronoUnit.DAYS);
+        boolean scheduleShortHard = rating == RatingGiven.HARD
+                && (nextState == CardLearningStateType.LEARNING || nextState == CardLearningStateType.RELEARNING);
+        boolean scheduleShortGood = rating == RatingGiven.GOOD
+                && (nextState == CardLearningStateType.LEARNING || nextState == CardLearningStateType.RELEARNING);
+
+        long scheduledDays;
+        Instant nextReviewAt;
+        if (scheduleShortAgain) {
+            scheduledDays = 0;
+            nextReviewAt = now.plus(AGAIN_REVIEW_DELAY_MINUTES, ChronoUnit.MINUTES);
+        } else if (scheduleShortHard) {
+            scheduledDays = 0;
+            nextReviewAt = now.plus(HARD_LEARNING_DELAY_MINUTES, ChronoUnit.MINUTES);
+        } else if (scheduleShortGood) {
+            scheduledDays = 0;
+            nextReviewAt = now.plus(GOOD_LEARNING_DELAY_MINUTES, ChronoUnit.MINUTES);
+        } else {
+            scheduledDays = calculateInterval(nextStability);
+            nextReviewAt = now.plus(scheduledDays, ChronoUnit.DAYS);
+        }
 
         return new RatingOutcome(
                 nextState,
@@ -77,10 +132,46 @@ public class SpacedRepetitionService {
                 (int) scheduledDays,
                 BigDecimal.valueOf(nextStability),
                 BigDecimal.valueOf(nextDifficulty),
-                elapsedDays,
+                (int) elapsedDays,  // Cast double to int for output
                 reps,
                 lapses,
                 now);
+    }
+
+    public int weightCount() {
+        return DEFAULT_WEIGHTS.length;
+    }
+
+    public double[] getWeights() {
+        return weights.clone();
+    }
+
+    public synchronized double[] updateWeights(double[] nextWeights) {
+        validateWeights(nextWeights);
+        weights = nextWeights.clone();
+        if (studyAlgorithmSettingsService != null) {
+            studyAlgorithmSettingsService.save(weights);
+        }
+        return getWeights();
+    }
+
+    public synchronized double[] resetWeights() {
+        weights = DEFAULT_WEIGHTS.clone();
+        if (studyAlgorithmSettingsService != null) {
+            studyAlgorithmSettingsService.save(weights);
+        }
+        return getWeights();
+    }
+
+    private void validateWeights(double[] candidate) {
+        if (candidate == null || candidate.length != DEFAULT_WEIGHTS.length) {
+            throw new IllegalArgumentException("weights must contain exactly " + DEFAULT_WEIGHTS.length + " values");
+        }
+        for (int i = 0; i < candidate.length; i++) {
+            if (!Double.isFinite(candidate[i])) {
+                throw new IllegalArgumentException("weight at index " + i + " must be finite");
+            }
+        }
     }
 
     private CardLearningStateType normalizeState(CardLearningStateType state) {
@@ -90,11 +181,12 @@ public class SpacedRepetitionService {
         return state == CardLearningStateType.MASTERED ? CardLearningStateType.REVIEW : state;
     }
 
-    private int calculateElapsedDays(CardLearningState state, Instant now, CardLearningStateType normalizedState) {
+    private double calculateElapsedDays(CardLearningState state, Instant now, CardLearningStateType normalizedState) {
         if (normalizedState == CardLearningStateType.NEW || state.getLastReviewedAt() == null) {
-            return 0;
+            return 0.0;
         }
-        return (int) Math.max(0, ChronoUnit.DAYS.between(state.getLastReviewedAt(), now));
+        long secondsBetween = ChronoUnit.SECONDS.between(state.getLastReviewedAt(), now);
+        return Math.max(0.0, secondsBetween / 86400.0);  // Convert seconds to fractional days
     }
 
     private int defaultZero(Integer value) {
@@ -108,17 +200,17 @@ public class SpacedRepetitionService {
         return Math.max(fallback, value.doubleValue());
     }
 
-    private double initStability(RatingGiven rating) {
-        return W[ratingToIndex(rating)];
+    private double initStability(RatingGiven rating, double[] w) {
+        return w[ratingToIndex(rating)];
     }
 
-    private double initDifficulty(RatingGiven rating) {
-        double d = W[4] - W[5] * (ratingToValue(rating) - 3);
+    private double initDifficulty(RatingGiven rating, double[] w) {
+        double d = w[4] - w[5] * (ratingToValue(rating) - 3);
         return constrainDifficulty(d);
     }
 
-    private double nextDifficulty(double currentDifficulty, RatingGiven rating) {
-        double next = currentDifficulty - W[6] * (ratingToValue(rating) - 3);
+    private double nextDifficulty(double currentDifficulty, RatingGiven rating, double[] w) {
+        double next = currentDifficulty - w[6] * (ratingToValue(rating) - 3);
         return constrainDifficulty(next);
     }
 
@@ -126,32 +218,38 @@ public class SpacedRepetitionService {
         return Math.min(Math.max(value, 1.0), 10.0);
     }
 
-    private double calculateRetrievability(int elapsedDays, double stability) {
+    private double calculateRetrievability(double elapsedDays, double stability) {
         double safeStability = Math.max(stability, 0.1);
-        return Math.pow(1 + ((double) elapsedDays) / (9.0 * safeStability), -1);
+        return Math.pow(1 + (elapsedDays / (9.0 * safeStability)), -1);  // elapsedDays is already double
     }
 
-    private double recallStability(double difficulty, double stability, double retrievability, RatingGiven rating) {
+    private double recallStability(double difficulty, double stability, double retrievability, RatingGiven rating, double[] w) {
         double safeStability = Math.max(stability, 0.1);
-        double hardPenalty = rating == RatingGiven.HARD ? W[15] : 1.0;
-        double easyBonus = rating == RatingGiven.EASY ? W[16] : 1.0;
+        double hardPenalty = rating == RatingGiven.HARD ? w[15] : 1.0;
+        double easyBonus = rating == RatingGiven.EASY ? w[16] : 1.0;
         double next = safeStability * (1
-                + Math.exp(W[8])
+                + Math.exp(w[8])
                 * (11 - difficulty)
-                * Math.pow(safeStability, -W[9])
-                * (Math.exp(W[10] * (1 - retrievability)) - 1)
+                * Math.pow(safeStability, -w[9])
+                * (Math.exp(w[10] * (1 - retrievability)) - 1)
                 * hardPenalty
                 * easyBonus);
         return Math.max(next, 0.1);
     }
 
-    private double forgetStability(double difficulty, double stability, double retrievability) {
+    private double forgetStability(double difficulty, double stability, double retrievability, double[] w) {
         double safeStability = Math.max(stability, 0.1);
-        double next = W[11]
-                * Math.pow(difficulty, -W[12])
-                * (Math.pow(safeStability + 1, W[13]) - 1)
-                * Math.exp(W[14] * (1 - retrievability));
+        double next = w[11]
+                * Math.pow(difficulty, -w[12])
+                * (Math.pow(safeStability + 1, w[13]) - 1)
+                * Math.exp(w[14] * (1 - retrievability));
         return Math.max(next, 0.1);
+    }
+
+    private double sameDayStability(double stability, RatingGiven rating, double[] w) {
+        double safeStability = Math.max(stability, 0.1);
+        double exponent = w[17] * (ratingToValue(rating) - 3 + w[18]);
+        return Math.max(0.1, safeStability * Math.exp(exponent));
     }
 
     private long calculateInterval(double nextStability) {

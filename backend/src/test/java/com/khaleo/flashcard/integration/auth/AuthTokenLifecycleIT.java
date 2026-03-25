@@ -40,13 +40,9 @@ class AuthTokenLifecycleIT extends IntegrationPersistenceTestBase {
     @Autowired
     private EmailVerificationTokenRepository emailVerificationTokenRepository;
 
-    @MockBean
-    private com.khaleo.flashcard.service.auth.SesEmailService sesEmailService;
-
     @BeforeEach
     void setUp() {
-        doNothing().when(sesEmailService).sendVerificationEmail(anyString(), anyString());
-        doNothing().when(sesEmailService).sendPasswordResetEmail(anyString(), anyString());
+        // No need to mock - MockEmailService is now @Primary and logs emails instead
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.khaleo.flashcard.service.auth;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@Primary
 @Profile("!production")
 @ConditionalOnProperty(prefix = "app.email", name = "provider", havingValue = "mock", matchIfMissing = true)
 public class MockEmailService implements EmailService {
