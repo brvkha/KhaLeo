@@ -43,15 +43,22 @@ Represents a single flashcard within a Deck.
 - `backMediaUrl` (String, nullable) - S3 URL for Image/Audio.
 - `createdAt` (Timestamp), `updatedAt` (Timestamp)
 
-### 3.4. Entity: `CardLearningState` (SM-2 Tracking)
+### 3.4. Entity: `CardLearningState` (FSRS Tracking)
 Tracks the learning progress of a specific Card for a specific User.
 - `id` (UUID, PK)
 - `card` (ManyToOne -> Card, Not Null)
 - `user` (ManyToOne -> User, Not Null)
-- `state` (Enum: `NEW`, `LEARNING`, `REVIEW`, `MASTERED`, default: `NEW`)
-- `easeFactor` (Float, default: 2.5) - SM-2 multiplier.
-- `intervalInDays` (Integer, default: 0) - SM-2 interval.
-- `nextReviewDate` (Timestamp, nullable) - When the card should appear again.
+- `state` (Enum: `NEW`, `LEARNING`, `RELEARNING`, `REVIEW`, `MASTERED`, default: `NEW`)
+- `intervalInDays` (Integer, default: 0)
+- `nextReviewDate` (Timestamp, nullable)
+- `lastReviewedAt` (Timestamp, nullable)
+- `learningStepGoodCount` (Integer, default: 0)
+- `fsrsStability` (Decimal, default: 0)
+- `fsrsDifficulty` (Decimal, default: 0)
+- `fsrsElapsedDays` (Integer, default: 0)
+- `fsrsScheduledDays` (Integer, default: 0)
+- `fsrsReps` (Integer, default: 0)
+- `fsrsLapses` (Integer, default: 0)
 
 ## 4. NoSQL Schema (AWS DynamoDB)
 

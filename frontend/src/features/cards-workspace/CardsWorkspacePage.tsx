@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import {
   createPrivateCard,
   createPrivateDeck,
@@ -24,13 +24,14 @@ type CardItem = {
   backText: string
 }
 
-const CARDS_PER_PAGE = 50
+const DEFAULT_CARDS_PER_PAGE = 50
 
 export function CardsWorkspacePage() {
   const [decks, setDecks] = useState<DeckOption[]>([])
   const [selectedDeckId, setSelectedDeckId] = useState('')
   const [cards, setCards] = useState<CardItem[]>([])
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [newDeckName, setNewDeckName] = useState('')
@@ -44,9 +45,10 @@ export function CardsWorkspacePage() {
   const [editCardBack, setEditCardBack] = useState('')
   const [showAddCardModal, setShowAddCardModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
-  const [hasMoreCards, setHasMoreCards] = useState(true)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const cardsContainerRef = useRef<HTMLDivElement>(null)
+  const [pageSize, setPageSize] = useState(DEFAULT_CARDS_PER_PAGE)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalCards, setTotalCards] = useState(0)
+  const [isLoadingCards, setIsLoadingCards] = useState(false)
 
   const loadDecks = async () => {
     try {
@@ -64,58 +66,29 @@ export function CardsWorkspacePage() {
     void loadDecks()
   }, [])
 
-  // Search and load cards on deck/search change
+  // Load cards on deck/search/page change
   useEffect(() => {
     if (!selectedDeckId) {
       setCards([])
       setCurrentPage(0)
+      setTotalPages(0)
+      setTotalCards(0)
       return
     }
+    setIsLoadingCards(true)
+    void searchPrivateDeckCards(selectedDeckId, searchTerm, currentPage, pageSize)
+      .then((page) => {
+        setCards(page.items)
+        setTotalPages(page.totalPages)
+        setTotalCards(page.totalElements)
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to search cards'))
+      .finally(() => setIsLoadingCards(false))
+  }, [selectedDeckId, searchTerm, currentPage, pageSize])
 
-    const timer = setTimeout(() => {
-      void searchPrivateDeckCards(selectedDeckId, search, 0, CARDS_PER_PAGE)
-        .then((items) => {
-          setCards(items)
-          setCurrentPage(0)
-          setHasMoreCards(items.length === CARDS_PER_PAGE)
-        })
-        .catch((err) => setError(err instanceof Error ? err.message : 'Failed to search cards'))
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [selectedDeckId, search])
-
-  // Infinite scroll handler
-  const handleScroll = useCallback(() => {
-    if (!cardsContainerRef.current) return
-    const { scrollTop, scrollHeight, clientHeight } = cardsContainerRef.current
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 200
-
-    if (isNearBottom && hasMoreCards && !isLoadingMore && selectedDeckId) {
-      void loadMoreCards()
-    }
-  }, [hasMoreCards, isLoadingMore, selectedDeckId])
-
-  const loadMoreCards = async () => {
-    if (isLoadingMore || !hasMoreCards || !selectedDeckId) return
-
-    setIsLoadingMore(true)
-    try {
-      const nextPage = currentPage + 1
-      const newCards = await searchPrivateDeckCards(
-        selectedDeckId,
-        search,
-        nextPage,
-        CARDS_PER_PAGE,
-      )
-      setCards((prev) => [...prev, ...newCards])
-      setCurrentPage(nextPage)
-      setHasMoreCards(newCards.length === CARDS_PER_PAGE)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load more cards')
-    } finally {
-      setIsLoadingMore(false)
-    }
+  const applySearch = () => {
+    setCurrentPage(0)
+    setSearchTerm(searchInput.trim())
   }
 
   const handleCreateDeck = async (e: React.FormEvent) => {
@@ -199,8 +172,10 @@ export function CardsWorkspacePage() {
         frontText: editCardFront.trim(),
         backText: editCardBack.trim(),
       })
-      const items = await searchPrivateDeckCards(selectedDeckId, search, 0, CARDS_PER_PAGE)
-      setCards(items)
+      const page = await searchPrivateDeckCards(selectedDeckId, searchTerm, currentPage, pageSize)
+      setCards(page.items)
+      setTotalPages(page.totalPages)
+      setTotalCards(page.totalElements)
       setSuccess('Card updated')
       cancelEditCard()
       setTimeout(() => setSuccess(''), 3000)
@@ -218,8 +193,10 @@ export function CardsWorkspacePage() {
         frontText: front,
         backText: back,
       })
-      const items = await searchPrivateDeckCards(selectedDeckId, search, 0, CARDS_PER_PAGE)
-      setCards(items)
+      const page = await searchPrivateDeckCards(selectedDeckId, searchTerm, currentPage, pageSize)
+      setCards(page.items)
+      setTotalPages(page.totalPages)
+      setTotalCards(page.totalElements)
       setSuccess('Card added')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
@@ -323,13 +300,17 @@ export function CardsWorkspacePage() {
                       </form>
                     ) : (
                       <div
-                        onClick={() => setSelectedDeckId(deck.id)}
+                        onClick={() => {
+                          setSelectedDeckId(deck.id)
+                          setCurrentPage(0)
+                        }}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
                             setSelectedDeckId(deck.id)
+                            setCurrentPage(0)
                           }
                         }}
                         className={`w-full text-left p-3 rounded transition cursor-pointer ${
@@ -381,36 +362,42 @@ export function CardsWorkspacePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="font-semibold text-slate-900">{selectedDeck.name}</h2>
-                    <p className="text-sm text-slate-600 mt-1">{cards.length} cards loaded</p>
+                    <p className="text-sm text-slate-600 mt-1">{totalCards} cards</p>
                   </div>
-                  <button
-                    onClick={() => setShowAddCardModal(true)}
-                    className="rounded bg-emerald-600 px-4 py-2 text-white text-sm hover:bg-emerald-700"
-                  >
-                    + Add Card
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="private-card-search"
+                      className="w-64 rounded border border-slate-300 px-3 py-2 text-sm"
+                      placeholder="Search front/back..."
+                      value={searchInput}
+                      onChange={(event) => setSearchInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          applySearch()
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={applySearch}
+                      className="rounded border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
+                    >
+                      Search
+                    </button>
+                    <button
+                      onClick={() => setShowAddCardModal(true)}
+                      className="rounded bg-emerald-600 px-4 py-2 text-white text-sm hover:bg-emerald-700"
+                    >
+                      + Add Card
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-3">
-                <input
-                  id="private-card-search"
-                  className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="Search cards..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-                <span className="text-xs text-slate-500 whitespace-nowrap">
-                  {cards.length} {cards.length === 1 ? 'card' : 'cards'}
-                </span>
-              </div>
-
-              <div
-                className="flex-1 overflow-auto"
-                ref={cardsContainerRef}
-                onScroll={handleScroll}
-              >
-                {cards.length === 0 ? (
+              <div className="flex-1 overflow-auto">
+                {isLoadingCards ? (
+                  <div className="p-4 text-center text-sm text-slate-500">Loading cards...</div>
+                ) : cards.length === 0 ? (
                   <div className="p-4 text-center text-sm text-slate-500">No cards found</div>
                 ) : (
                   <table className="w-full text-sm">
@@ -425,7 +412,7 @@ export function CardsWorkspacePage() {
                     <tbody>
                       {cards.map((card, idx) => (
                         <tr key={card.id} className={`border-b border-slate-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
-                          <td className="p-3 text-slate-500">{idx + 1}</td>
+                          <td className="p-3 text-slate-500">{currentPage * pageSize + idx + 1}</td>
                           <td className="p-3 text-slate-900">
                             {editingCardId === card.id ? (
                               <input
@@ -480,11 +467,11 @@ export function CardsWorkspacePage() {
                                     className="rounded bg-rose-600 px-3 py-1 text-white text-xs hover:bg-rose-700"
                                     onClick={() => {
                                       void deletePrivateCard(card.id)
-                                        .then(() => searchPrivateDeckCards(selectedDeckId, search, 0, CARDS_PER_PAGE))
-                                        .then((items) => {
-                                          setCards(items)
-                                          setCurrentPage(0)
-                                          setHasMoreCards(items.length === CARDS_PER_PAGE)
+                                        .then(() => searchPrivateDeckCards(selectedDeckId, searchTerm, currentPage, pageSize))
+                                        .then((page) => {
+                                          setCards(page.items)
+                                          setTotalPages(page.totalPages)
+                                          setTotalCards(page.totalElements)
                                         })
                                         .catch((err) => setError(err instanceof Error ? err.message : 'Failed to delete card'))
                                     }}
@@ -500,12 +487,49 @@ export function CardsWorkspacePage() {
                     </tbody>
                   </table>
                 )}
-                {isLoadingMore && (
-                  <div className="p-4 text-center text-sm text-slate-500">
-                    Loading more cards...
-                  </div>
-                )}
               </div>
+
+              {totalPages > 0 && (
+                <div className="border-t border-slate-200 px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <label htmlFor="cards-page-size" className="text-xs text-slate-500">
+                      Page size
+                    </label>
+                    <select
+                      id="cards-page-size"
+                      className="rounded border border-slate-300 px-2 py-1 text-xs"
+                      value={pageSize}
+                      onChange={(event) => {
+                        setPageSize(Number(event.target.value))
+                        setCurrentPage(0)
+                      }}
+                    >
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                    <span className="text-xs text-slate-500">
+                      Page {currentPage + 1} / {totalPages}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 disabled:opacity-50"
+                      disabled={currentPage === 0}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+                    >
+                      Prev
+                    </button>
+                    <button
+                      className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 disabled:opacity-50"
+                      disabled={currentPage + 1 >= totalPages}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.max(totalPages - 1, 0)))}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="flex items-center justify-center h-full text-slate-500">

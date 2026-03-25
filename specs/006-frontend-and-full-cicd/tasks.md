@@ -1,4 +1,4 @@
-# Tasks: Frontend Application and Full Push-to-Deploy CI/CD
+# Tasks: Frontend Application and Production-Gated CI/CD
 
 **Input**: Design docs from `/specs/006-frontend-and-full-cicd/`  
 **Prerequisites**: `plan.md` (required), `spec.md` (required), `quickstart.md`
@@ -21,9 +21,9 @@
 
 ## Phase 2: CI/CD Scope (User Story 3 - Priority: P1)
 
-**Goal**: Push to `main` executes CI automatically and allows production deployment only after environment approval.
+**Goal**: CI executes as quality gate and production deployment runs only through approved workflow dispatch.
 
-**Independent Test**: Push to `main` runs CI, waits on `production` approval gate, and deploys immutable SHA artifacts for backend/frontend after approval.
+**Independent Test**: CI run passes, then deploy workflows run via `workflow_dispatch`, wait on `production` approval gate, and deploy immutable SHA artifacts for backend/frontend.
 
 **Acceptance Checks**:
 - CI runs backend + frontend quality gates on PR and push.
@@ -88,14 +88,14 @@
 **Acceptance Checks**:
 - Frontend unit/component/E2E suites run in CI.
 - CI output includes coverage and stage-level diagnostics.
-- End-to-end push-to-deploy dry run is repeatable.
+- End-to-end gated deployment dry run is repeatable.
 
 - [X] T025 [P] Add frontend unit tests for auth hooks, guard logic, and state transitions in frontend/src/**/*.test.ts (depends on T013, Owner: Frontend)
 - [X] T026 [P] Add frontend component/integration tests for deck/card/study journeys in frontend/src/**/*.test.tsx (depends on T018, Owner: Frontend)
 - [X] T027 Add frontend E2E smoke tests for P1 flows in frontend/tests/e2e/ (depends on T019, Owner: Frontend)
 - [X] T028 Add CI coverage publication and threshold enforcement in .github/workflows/ci.yml (depends on T005, T025, T026, Owner: DevOps)
 - [X] T029 Add frontend-backend DTO contract drift checks in frontend/src/services/contracts/ (depends on T014, T015, T018, Owner: Frontend)
-- [X] T030 Execute and record push-to-main deployment validation checklist in specs/006-frontend-and-full-cicd/quickstart.md (depends on T008, T010, T011, T027, Owner: DevOps)
+- [X] T030 Execute and record manual gated deployment validation checklist in specs/006-frontend-and-full-cicd/quickstart.md (depends on T008, T010, T011, T027, Owner: DevOps)
 
 ---
 

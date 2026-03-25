@@ -51,7 +51,7 @@ Initial Gate Assessment (Pre-Phase 0)
   records; Flyway migration requirements are included.
 - Quality gate: PASS. Testing strategy is mapped to unit/integration/contract
   coverage with expected alignment to 80% and 60/30/10 targets.
-- Compliance gate: PASS. Feature has no FSRS v4 or card-state behavior changes and
+- Compliance gate: PASS. Feature has no FSRS v6 or card-state behavior changes and
   preserves account-level learning-limit rules.
 
 Post-Design Re-check (Post-Phase 1)

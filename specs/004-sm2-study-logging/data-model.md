@@ -1,4 +1,4 @@
-# Data Model: FSRS v4 Spaced Repetition and Study Activity Logging
+# Data Model: FSRS v6 Spaced Repetition and Study Activity Logging
 
 ## Relational Entities (Aurora MySQL)
 

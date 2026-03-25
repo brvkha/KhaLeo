@@ -1,4 +1,4 @@
-# Feature Specification: Frontend Application and Full Push-to-Deploy CI/CD
+# Feature Specification: Frontend Application and Production-Gated CI/CD
 
 **Feature Branch**: `006-frontend-and-full-cicd`  
 **Created**: 2026-03-16  
@@ -10,7 +10,7 @@
 Complete the product by delivering:
 
 1. A production-ready React + Tailwind frontend for Guest, User, and Admin flows.
-2. End-to-end CI/CD so a push to `main` automatically builds, tests, and deploys both frontend and backend with environment-safe controls.
+2. End-to-end CI/CD so operators can run quality gates and production deployments with environment-safe controls, immutable artifacts, and approval gates.
 
 ## Clarifications
 
@@ -23,8 +23,8 @@ Complete the product by delivering:
 
 ### Session 2026-03-20
 
-- Q: Public route policy for app entry and decks discovery? -> A: Only `/decks` is public; all other frontend routes require authenticated session.
-- Q: What happens when guest clicks deck action from `/decks`? -> A: Guest is redirected to login with return target, then returned to intended page after successful login.
+- Q: Public route policy for app entry and decks discovery? -> A: `/flashcard/decks` is public (with `/decks` alias); all other frontend routes require authenticated session.
+- Q: What happens when guest clicks deck action from `/flashcard/decks`? -> A: Guest is redirected to login with return target, then returned to intended page after successful login.
 - Q: What baseline test data is required? -> A: Provide seeded users/decks/cards dataset and fixed sample login accounts for manual and E2E verification.
 
 ## User Scenarios & Testing
@@ -60,14 +60,14 @@ As an admin, I can use a dashboard UI to view platform stats and moderate users/
 
 ### User Story 3 - Full Automatic CI/CD on Push (Priority: P1)
 
-As a release owner, I can push to `main` and have frontend and backend automatically built, tested, and deployed so releases are consistent and hands-off.
+As a release owner, I can run CI and deployment workflows with immutable artifact SHA targeting and production approval gates so releases are consistent and controlled.
 
 **Independent Test**: Push a change to `main`, verify both workflows run, artifacts are versioned by commit SHA, deployments execute, and failures block completion.
 
 **Acceptance Scenarios**:
 
-1. **Given** a push to `main`, **When** GitHub Actions starts, **Then** backend tests/build and frontend tests/build execute in CI before deployment steps.
-2. **Given** successful CI, **When** deploy starts, **Then** backend is deployed to EC2 private instances via SSM and frontend is deployed to S3 + CloudFront invalidation.
+1. **Given** CI workflow is triggered, **When** GitHub Actions starts, **Then** backend tests/build and frontend tests/build execute before deployment workflows.
+2. **Given** successful CI and production approval, **When** deploy workflows are dispatched, **Then** backend and frontend are deployed with immutable SHA traceability.
 3. **Given** one target fails, **When** workflows finish, **Then** the run is marked failed with per-target diagnostics.
 4. **Given** a rollback requirement, **When** a previous commit SHA is selected, **Then** the same immutable artifact version can be redeployed.
 
@@ -83,7 +83,7 @@ As a release owner, I can push to `main` and have frontend and backend automatic
 - **FR-004**: Frontend MUST use S3 presigned upload flow for image/audio media and enforce 5MB max size in UI validation.
 - **FR-005**: Frontend MUST include simple deck search and in-deck advanced card search.
 - **FR-006**: CI MUST run backend unit/integration/contract tests and frontend unit/component/E2E tests on pushes and pull requests.
-- **FR-007**: CD MUST auto-deploy on push to `main` after CI passes.
+- **FR-007**: CD MUST run via controlled workflow dispatch with production approval; no implicit auto-deploy is required.
 - **FR-008**: Backend deployment MUST preserve immutable commit-SHA artifact semantics.
 - **FR-009**: Frontend deployment MUST publish static artifacts to S3 and invalidate CloudFront cache.
 - **FR-010**: CI/CD MUST support environment-specific configuration using GitHub Environments and encrypted secrets.
@@ -92,11 +92,11 @@ As a release owner, I can push to `main` and have frontend and backend automatic
  - **FR-013**: Runtime secrets and instance-level secrets SHOULD be stored in AWS Secrets Manager and retrieved by deployed instances via IAM role.
  - **FR-014**: CI/CD MUST not perform automatic rollbacks on partial deployment failures; runs should be marked failed and require manual rollback via documented procedures.
  - **FR-015**: Deployments to production MUST require GitHub Environment approval after CI success.
-- **FR-016**: Frontend route policy MUST allow unauthenticated access only to `/decks`; all other application routes MUST require authenticated user state.
+- **FR-016**: Frontend route policy MUST allow unauthenticated access only to `/flashcard/decks` (and `/decks` alias); all other application routes MUST require authenticated user state.
 - **FR-017**: If an unauthenticated user accesses a protected route, frontend MUST redirect to login and preserve `returnTo` so successful login navigates back to intended route.
-- **FR-018**: When a guest initiates deck action from `/decks` that requires authentication (e.g., import/copy/open private workspace), frontend MUST redirect to login with return target and resume action context after login.
+- **FR-018**: When a guest initiates deck action from public discovery routes that requires authentication (e.g., import/copy/open private workspace), frontend MUST redirect to login with return target and resume action context after login.
 - **FR-019**: Backend API policy for frontend integration MUST allow guest access only to `/api/v1/auth/**` and `GET /api/v1/public/decks/**` (plus health/docs endpoints), while all other `/api/v1/**` endpoints require JWT authentication.
-- **FR-020**: Project MUST provide reusable seeded test data containing at least 6 users, 12 decks (public + private), and 120 cards, together with documented sample login accounts for QA/E2E runs.
+- **FR-020**: Project MUST provide reusable seeded test data with fixed sample login accounts and large-scale deck coverage, including an English deck with 1500 cards for QA/E2E and performance checks.
 
 Note: Production runtime secrets (DB credentials, JWT_SECRET, SES credentials) should be provisioned into AWS Secrets Manager and referenced by workflows and instances; deployment workflows should use short-lived role assumption via OIDC.
 
@@ -132,7 +132,7 @@ Note: Production runtime secrets (DB credentials, JWT_SECRET, SES credentials) s
 
 - **SC-001**: 100% of P1 user flows are executable from UI without manual API tooling.
 - **SC-002**: 100% of admin flows in scope are executable from UI by admin role.
-- **SC-003**: 100% of pushes to `main` trigger CI/CD workflows automatically.
+- **SC-003**: 100% of documented CI and deployment workflows are executable with expected gating (quality checks and production approval).
 - **SC-004**: At least 99% of successful runs deploy frontend and backend without manual intervention.
 - **SC-005**: 100% of failed runs report enough detail to identify the failed stage and target.
 - **SC-006**: 100% of guest attempts to open protected frontend routes are redirected to login with a valid return target.

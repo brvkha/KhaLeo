@@ -6,7 +6,7 @@
 - Node.js 20+ for frontend changes.
 - Existing auth flow available for guest/user role path checks.
 - Local database/test environment prepared per project standard setup.
-- Seed fixture from `test-data.md` is loaded (accounts, 12 decks, 120 cards).
+- Seed fixture from `test-data.md` is loaded (accounts, mixed public/private decks, and large-card datasets including EN-VOC-CORE-1500).
 
 ## 2. Implement Discovery and Workspace Segmentation
 
@@ -57,7 +57,7 @@
 2. Validate auth boundaries:
    - guest can view public decks
    - guest cannot import
-   - guest can access only `/decks`; all other routes redirect to login with `returnTo`
+   - guest can access only public discovery route (`/flashcard/decks`, alias `/decks`); all other routes redirect to login with `returnTo`
    - private workspace mutations remain owner-only.
 
 ## 7. Verify with Targeted Tests

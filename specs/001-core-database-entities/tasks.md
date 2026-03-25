@@ -50,7 +50,7 @@
 - [X] T015 [P] [US1] Add migration contract test for relational schema objects in backend/src/test/java/com/khaleo/flashcard/contract/FlywaySchemaContractTest.java
 - [X] T016 [P] [US1] Add integration test for user-deck-card persistence flow in backend/src/test/java/com/khaleo/flashcard/integration/UserDeckCardPersistenceIT.java
 - [X] T017 [P] [US1] Add integration test for unique active learning state per user-card in backend/src/test/java/com/khaleo/flashcard/integration/CardLearningStateUniquenessIT.java
-- [X] T018 [P] [US1] Add unit tests for FSRS v4 entity default values in backend/src/test/java/com/khaleo/flashcard/unit/entity/CardLearningStateDefaultsTest.java
+- [X] T018 [P] [US1] Add unit tests for FSRS v6 entity default values in backend/src/test/java/com/khaleo/flashcard/unit/entity/CardLearningStateDefaultsTest.java
 
 ### Implementation for User Story 1
 

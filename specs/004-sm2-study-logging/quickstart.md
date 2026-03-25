@@ -1,16 +1,16 @@
-# Quickstart: FSRS v4 Spaced Repetition and Study Activity Logging
+# Quickstart: FSRS v6 Spaced Repetition and Study Activity Logging
 
 ## 1. Prerequisites
 
 - Java 17 installed.
 - Maven available.
-- Docker running for integration-test dependencies.
+- Docker running for local MySQL and integration-test dependencies.
 - AWS credentials configured for DynamoDB access in target environment.
 
 ## 2. Implement Scheduling Domain Logic
 
 1. Add/extend domain service under `backend/src/main/java/com/khaleo/flashcard/service/study/`:
-   - Apply FSRS v4 formulas for `AGAIN`, `HARD`, `GOOD`, `EASY`.
+   - Apply FSRS v6 formulas for `AGAIN`, `HARD`, `GOOD`, `EASY`.
    - Implement retrievability $R(t,S)$ and recall/forget stability update formulas.
    - Implement state transitions for `NEW`, `LEARNING`, `REVIEW`, `RELEARNING` (plus legacy `MASTERED` compatibility mapping).
 2. Ensure rating responses expose FSRS outputs:
@@ -21,11 +21,11 @@
 ## 3. Implement Study APIs
 
 1. Add next-cards endpoint under `backend/src/main/java/com/khaleo/flashcard/controller/study/`:
-   - `GET /api/v1/study/decks/{deckId}/next-cards`
+   - `GET /api/v1/study-session/decks/{deckId}/next-cards`
    - Enforce ordering tiers and daily new-card limit.
    - Support `size` and `continuationToken` pagination.
 2. Add card-rating endpoint:
-   - `POST /api/v1/study/cards/{cardId}/rate`
+   - `POST /api/v1/study-session/cards/{cardId}/rate`
    - Validate rating/time payload.
    - Persist updated scheduling state.
 

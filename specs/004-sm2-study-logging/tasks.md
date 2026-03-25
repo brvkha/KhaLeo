@@ -1,4 +1,4 @@
-# Tasks: FSRS v4 Spaced Repetition and Study Activity Logging
+# Tasks: FSRS v6 Spaced Repetition and Study Activity Logging
 
 **Input**: Design documents from `/specs/004-sm2-study-logging/`
 **Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/study-engine-contract.md, quickstart.md
@@ -52,7 +52,7 @@
 - [X] T014 [P] [US1] Add next-cards request/response DTOs in backend/src/main/java/com/khaleo/flashcard/model/study/NextCardsRequest.java and backend/src/main/java/com/khaleo/flashcard/model/study/StudyCardSummary.java
 - [X] T015 [P] [US1] Implement daily unique-card quota computation service in backend/src/main/java/com/khaleo/flashcard/service/study/StudyDailyQuotaService.java
 - [X] T016 [US1] Implement due-card selection orchestration with tier ordering in backend/src/main/java/com/khaleo/flashcard/service/study/NextCardsService.java
-- [X] T017 [US1] Implement GET /api/v1/study/decks/{deckId}/next-cards in backend/src/main/java/com/khaleo/flashcard/controller/study/StudyController.java
+- [X] T017 [US1] Implement GET /api/v1/study-session/decks/{deckId}/next-cards in backend/src/main/java/com/khaleo/flashcard/controller/study/StudySessionController.java
 - [X] T018 [US1] Wire pagination validation and continuation token handling in backend/src/main/java/com/khaleo/flashcard/service/study/NextCardsService.java and backend/src/main/java/com/khaleo/flashcard/model/study/NextCardsPageResponse.java
 - [X] T019 [US1] Emit retrieval success/denial/failure telemetry in backend/src/main/java/com/khaleo/flashcard/service/study/NextCardsService.java
 
@@ -62,7 +62,7 @@
 
 ## Phase 4: User Story 2 - Rate Cards With Correct Scheduling (Priority: P2)
 
-**Goal**: Apply validated learner ratings to card state, scheduled days, difficulty, and stability with strict FSRS v4 fidelity.
+**Goal**: Apply validated learner ratings to card state, scheduled days, difficulty, and stability with strict FSRS v6 fidelity.
 
 **Independent Test**: Submit ratings across NEW/LEARNING/REVIEW/RELEARNING paths and verify deterministic transitions and FSRS formula compliance.
 
@@ -77,8 +77,8 @@
 - [X] T023 [P] [US2] Add rating request/response DTOs in backend/src/main/java/com/khaleo/flashcard/model/study/RateCardRequest.java and backend/src/main/java/com/khaleo/flashcard/model/study/RateCardResponse.java
 - [X] T024 [P] [US2] Implement FSRS scheduling math and D/S/R update formulas in backend/src/main/java/com/khaleo/flashcard/service/study/SpacedRepetitionService.java
 - [X] T025 [US2] Implement rating persistence orchestration in backend/src/main/java/com/khaleo/flashcard/service/study/StudyRatingService.java
-- [X] T026 [US2] Implement POST /api/v1/study/cards/{cardId}/rate in backend/src/main/java/com/khaleo/flashcard/controller/study/StudyController.java
-- [X] T027 [US2] Add request validation and deterministic error mapping for rating/time inputs in backend/src/main/java/com/khaleo/flashcard/controller/study/StudyController.java and backend/src/main/java/com/khaleo/flashcard/controller/GlobalExceptionHandler.java
+- [X] T026 [US2] Implement POST /api/v1/study-session/cards/{cardId}/rate in backend/src/main/java/com/khaleo/flashcard/controller/study/StudySessionController.java
+- [X] T027 [US2] Add request validation and deterministic error mapping for rating/time inputs in backend/src/main/java/com/khaleo/flashcard/controller/study/StudySessionController.java and backend/src/main/java/com/khaleo/flashcard/controller/GlobalExceptionHandler.java
 - [X] T028 [US2] Emit rating transition telemetry and compliance markers in backend/src/main/java/com/khaleo/flashcard/service/study/StudyRatingService.java
 
 **Checkpoint**: User Stories 1 and 2 are independently testable.
@@ -114,7 +114,7 @@
 **Purpose**: Complete cross-story validation, observability hardening, and delivery evidence.
 
 - [X] T037 [P] Add CloudWatch alarms for study retrieval/rating/logging failures in infra/terraform/cloudwatch-persistence-alarms.tf and infra/terraform/cloudwatch-auth-security-alarms.tf
-- [X] T038 [P] Add/refresh study feature documentation in KhaLeoDocs/sm2_engine_and_dynamodb_logging.md
+- [X] T038 [P] Add/refresh study feature documentation in KhaLeoDocs/sm2_engine_and_dynamodb_logging.md (legacy filename, FSRS content)
 - [X] T039 Run full backend validation suite and capture summary in backend/build/reports/tests/phase-sm2-study-logging-summary.md
 - [X] T040 Validate quickstart flow and record verification evidence in specs/004-sm2-study-logging/quickstart.md
 - [X] T041 Final compliance and artifact alignment pass across specs/004-sm2-study-logging/spec.md, specs/004-sm2-study-logging/plan.md, and specs/004-sm2-study-logging/tasks.md

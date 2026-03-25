@@ -23,6 +23,18 @@ export type DeckStatsDto = {
 
 type PagedResponse<T> = {
   content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export type PrivateCardSearchPage = {
+  items: PrivateCardDto[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
 }
 
 export async function listPrivateDecks(query = ''): Promise<PrivateDeckDto[]> {
@@ -69,12 +81,18 @@ export async function deletePrivateDeck(deckId: string): Promise<void> {
   })
 }
 
-export async function searchPrivateDeckCards(deckId: string, query: string, pageNum = 0, pageSize = 50): Promise<PrivateCardDto[]> {
+export async function searchPrivateDeckCards(deckId: string, query: string, pageNum = 0, pageSize = 50): Promise<PrivateCardSearchPage> {
   const encoded = encodeURIComponent(query)
   const page = await requestJson<PagedResponse<PrivateCardDto>>(
-    `/api/v1/private/decks/${deckId}/cards/search?frontText=${encoded}&page=${pageNum}&size=${pageSize}`,
+    `/api/v1/private/decks/${deckId}/cards/search?frontText=${encoded}&backText=${encoded}&page=${pageNum}&size=${pageSize}`,
   )
-  return page.content
+  return {
+    items: page.content,
+    page: page.page,
+    size: page.size,
+    totalElements: page.totalElements,
+    totalPages: page.totalPages,
+  }
 }
 
 export async function createPrivateCard(payload: {

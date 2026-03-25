@@ -5,7 +5,7 @@
 
 ## Summary
 
-Implement an enterprise-grade AWS delivery path where push-to-main triggers CI, production deploys are approval-gated, and both frontend and backend releases are immutable and traceable. Frontend deploys to S3+CloudFront; backend deploys by immutable JAR uploaded to S3 and rolled out to EC2 instances through SSM commands behind ALB/WAF/Route53.
+Implement an enterprise-grade AWS delivery path where CI and deploy workflows are explicitly run with production approval gates, and both frontend and backend releases are immutable and traceable. Frontend deploys to S3+CloudFront; backend deploys via immutable AMI rollout and ASG instance refresh behind ALB/WAF/Route53.
 
 ## Technical Context
 
@@ -30,7 +30,7 @@ Implement an enterprise-grade AWS delivery path where push-to-main triggers CI, 
 - Observability gate: PASS. Plan keeps JSON logging, Splunk HEC, New Relic, and CloudWatch alarm coverage as explicit deliverables.
 - Data gate: PASS. Aurora and Dynamo responsibilities remain separated; no Flyway contract violation.
 - Quality gate: PASS with action. CI must include backend/frontend gates plus Terraform validate/plan and preserve 80% test target.
-- Compliance gate: PASS. No direct FSRS v4 algorithm changes; study constraints remain unaffected.
+- Compliance gate: PASS. No direct FSRS v6 algorithm changes; study constraints remain unaffected.
 
 ## Project Structure
 
@@ -87,7 +87,7 @@ No constitution violations requiring justification.
 - Observability gate: PASS. Delivery contract requires deployment summaries and existing CloudWatch/Splunk/New Relic posture remains intact.
 - Data gate: PASS. Aurora/Dynamo boundaries remain unchanged and documented in data model.
 - Quality gate: PASS with implementation follow-up. CI gates and Terraform validate/plan are defined for task execution.
-- Compliance gate: PASS. No FSRS v4, card-state, or daily-learning-limit rule changes in this scope.
+- Compliance gate: PASS. No FSRS v6, card-state, or daily-learning-limit rule changes in this scope.
 
 ## Final Compliance Checklist
 

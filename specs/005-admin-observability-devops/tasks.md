@@ -93,20 +93,20 @@
 
 ## Phase 5: User Story 3 - Deploy Backend Changes Safely (Priority: P3)
 
-**Goal**: Deliver immutable commit-SHA artifact deployment via GitHub Actions and SSM with all-target dispatch and fail-on-any-target semantics.
+**Goal**: Deliver immutable commit-SHA backend deployment via GitHub Actions with deterministic rollout diagnostics and fail-fast semantics.
 
-**Independent Test**: Push to main (or workflow dispatch), verify SHA artifact upload, SSM dispatch to all tagged targets, and overall run fails if any target fails.
+**Independent Test**: Run deploy workflow via workflow dispatch, verify SHA artifact upload, immutable rollout execution, and overall run fails if rollout status is unsuccessful.
 
 ### Tests for User Story 3
 
 - [X] T035 [P] [US3] Add workflow validation test for deploy-backend semantics in .github/workflows/deploy-backend.yml
-- [X] T036 [P] [US3] Add deployment script dry-run test for SSM result aggregation in backend/src/test/java/com/khaleo/flashcard/integration/deploy/DeploymentAggregationIT.java
+- [X] T036 [P] [US3] Add deployment workflow validation tests for immutable rollout status handling in backend/src/test/java/com/khaleo/flashcard/integration/deploy/DeploymentAggregationIT.java
 
 ### Implementation for User Story 3
 
 - [X] T037 [US3] Implement full GitHub Actions deploy workflow in .github/workflows/deploy-backend.yml
 - [X] T038 [US3] Add immutable artifact naming and S3 upload logic in .github/workflows/deploy-backend.yml
-- [X] T039 [US3] Add SSM dispatch and per-target status polling logic in .github/workflows/deploy-backend.yml
+- [X] T039 [US3] Add immutable rollout status polling logic in .github/workflows/deploy-backend.yml
 - [X] T040 [US3] Enforce fail-if-any-target-fails logic in .github/workflows/deploy-backend.yml
 - [X] T041 [US3] Add EC2 deployment command script for jar update and service restart in backend/scripts/deploy-via-ssm.sh
 - [X] T042 [US3] Add Terraform variables for deploy target tags and artifact bucket in infra/terraform/variables.tf

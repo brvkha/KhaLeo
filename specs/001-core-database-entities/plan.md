@@ -55,7 +55,7 @@ Initial Gate Assessment (Pre-Phase 0)
   defined.
 - Quality gate: PASS. Plan includes unit/integration/concurrency validation work
   aligned with 80% and 60/30/10 targets.
-- Compliance gate: PASS. FSRS v4 state persistence, account learning limits, and
+- Compliance gate: PASS. FSRS v6 state persistence, account learning limits, and
   card-state semantics are directly addressed.
 
 Post-Design Re-check (Post-Phase 1)
@@ -74,7 +74,7 @@ Post-Design Re-check (Post-Phase 1)
   formalized.
 - Quality gate: PASS. Test strategy includes rejection cases, migration
   validation, and optimistic-concurrency conflict tests.
-- Compliance gate: PASS. FSRS v4-supporting fields and constrained state model are
+- Compliance gate: PASS. FSRS v6-supporting fields and constrained state model are
   fully represented.
 
 ## Project Structure

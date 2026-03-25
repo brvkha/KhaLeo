@@ -174,7 +174,7 @@ Task: T015 [US1] Frontend deploy workflow in .github/workflows/deploy-frontend.y
 
 1. Complete Phase 1 and Phase 2.
 2. Deliver Phase 3 (US1) end-to-end.
-3. Validate push-to-main plus approval-gated deploy flow.
+3. Validate manual CI plus approval-gated deploy flow.
 4. Demo immutable SHA traceability and manual rollback path.
 
 ### Incremental Delivery

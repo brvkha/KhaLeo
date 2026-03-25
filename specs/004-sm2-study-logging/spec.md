@@ -1,9 +1,9 @@
-# Feature Specification: FSRS v4 Study Engine and Activity Logging
+# Feature Specification: FSRS v6 Study Engine and Activity Logging
 
 **Feature Branch**: `004-sm2-study-logging`  
 **Created**: 2026-03-16  
 **Status**: Draft  
-**Input**: User description: "Implement FSRS v4 spaced repetition engine and DynamoDB study activity logging"
+**Input**: User description: "Implement FSRS v6 spaced repetition engine and DynamoDB study activity logging"
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -38,7 +38,7 @@ As a learner, I can fetch the next cards that are currently due so I can run a f
 
 ### User Story 2 - Rate Cards With Correct Scheduling (Priority: P2)
 
-As a learner, I can submit a rating for a studied card so the system updates card state, due date, difficulty (D), and stability (S) according to FSRS v4 rules.
+As a learner, I can submit a rating for a studied card so the system updates card state, due date, difficulty (D), and stability (S) according to FSRS v6 rules.
 
 **Why this priority**: Accurate schedule updates are the core value of spaced repetition and directly determine learning effectiveness.
 
@@ -92,7 +92,7 @@ As a learner and product owner, I need each rating action recorded in an activit
 
 ### Constitutional Impact *(mandatory)*
 
-- **Algorithm Fidelity**: High impact. This feature defines FSRS v4 rating math with D/S/R memory modeling and formalizes transitions (`NEW` -> `LEARNING`/`REVIEW`, `REVIEW` -> `RELEARNING` on lapse) including account-level daily learning limits.
+- **Algorithm Fidelity**: High impact. This feature defines FSRS v6 rating math with D/S/R memory modeling and formalizes transitions (`NEW` -> `LEARNING`/`REVIEW`, `REVIEW` -> `RELEARNING` on lapse) including account-level daily learning limits.
 - **Security Impact**: Moderate impact. Study retrieval and rating must enforce authenticated access and ownership checks so users cannot study or modify other users' cards.
 - **Observability Impact**: High impact. The feature requires success/failure telemetry for next-card retrieval, rating actions, and asynchronous activity logging outcomes, including error visibility when logging fails.
 - **Infrastructure Impact**: Moderate impact. Requires a persistent activity-log data store and corresponding operational monitoring for asynchronous write health.
@@ -110,8 +110,8 @@ As a learner and product owner, I need each rating action recorded in an activit
 - **FR-002**: System MUST prioritize returned cards in this order: due learning cards, due review cards, then eligible new cards.
 - **FR-003**: System MUST enforce each account's daily learning limit based on the count of unique cards first studied that day and MUST exclude additional new cards once the limit is reached.
 - **FR-004**: System MUST support card rating submissions with allowed rating values `AGAIN`, `HARD`, `GOOD`, and `EASY`.
-- **FR-005**: System MUST update scheduled days, difficulty, stability, next due timestamp, and learning state according to defined FSRS v4 rules for each rating outcome.
-- **FR-006**: System MUST implement FSRS v4 default parameters (`W[0..16]`, `DECAY=-0.5`, `FACTOR=0.9`) and permit parameter override for future optimization.
+- **FR-005**: System MUST update scheduled days, difficulty, stability, next due timestamp, and learning state according to defined FSRS v6 rules for each rating outcome.
+- **FR-006**: System MUST implement FSRS v6 default parameters (`W[0..16]`, `DECAY=-0.5`, `FACTOR=0.9`) and permit parameter override for future optimization.
 - **FR-007**: System MUST compute retrievability for review cards using $R(t,S)=\left(1+\frac{t}{9S}\right)^{-1}$ and use it in both recall and forget stability update formulas.
 - **FR-008**: System MUST reject rating operations for inaccessible or nonexistent cards with clear error outcomes.
 - **FR-009**: System MUST record each accepted rating action in an activity log containing a unique log identifier, timestamp, user identifier, card identifier, deck identifier, rating, time spent, resulting scheduled days, resulting stability, and resulting difficulty.
@@ -137,7 +137,7 @@ As a learner and product owner, I need each rating action recorded in an activit
 ### Measurable Outcomes
 
 - **SC-001**: 99% of next-cards requests return only cards that are currently due or new-card eligible according to configured daily limits.
-- **SC-002**: 100% of accepted rating actions produce schedule updates consistent with defined FSRS v4 formulas and state-transition rules in automated verification scenarios.
+- **SC-002**: 100% of accepted rating actions produce schedule updates consistent with defined FSRS v6 formulas and state-transition rules in automated verification scenarios.
 - **SC-003**: 95% of rating requests complete with a user-visible response in under 1 second under normal operating load.
 - **SC-004**: 99% of successful rating actions produce a corresponding activity-log record within 30 seconds.
 - **SC-005**: Operations can identify and investigate 100% of asynchronous logging failures through emitted telemetry and alertable signals.

@@ -31,7 +31,7 @@ mandated Anki-style scheduling fidelity and account-level learning limits.
 **Target Platform**: AWS-hosted web application (CloudFront/S3 frontend + EC2 private-subnet backend behind ALB/WAF)
 **Project Type**: Web application (replicated monolith with frontend, backend, and Terraform-managed infrastructure)  
 **Performance Goals**: Discovery and study list first-page responses p95 < 1s; import/re-import completion p95 < 30s for typical deck sizes; rating response p95 < 1s  
-**Constraints**: Preserve FSRS v4/Anki scheduling fidelity, enforce owner-based mutation rules, guest-read/public-only discovery, mandatory pagination on list endpoints  
+**Constraints**: Preserve FSRS v6/Anki scheduling fidelity, enforce owner-based mutation rules, guest-read/public-only discovery, mandatory pagination on list endpoints  
 **Scale/Scope**: Portfolio scale (~50 users, ~30 concurrent active users); one new end-to-end feature slice across discovery, import merge, and study session behavior
 
 ## Constitution Check
@@ -56,7 +56,7 @@ Initial Gate Assessment (Pre-Phase 0)
   no change to DynamoDB role beyond existing activity/event logging.
 - Quality gate: PASS. Plan includes layered test coverage for role boundaries,
   import merge/conflict outcomes, and scheduling/timing correctness.
-- Compliance gate: PASS. New-card timing requirements and FSRS v4 fidelity are
+- Compliance gate: PASS. New-card timing requirements and FSRS v6 fidelity are
   explicitly preserved; account-level daily limits remain unchanged.
 
 Post-Design Re-check (Post-Phase 1)
@@ -75,7 +75,7 @@ Post-Design Re-check (Post-Phase 1)
   conflict-decision audit artifacts within Aurora-domain ownership.
 - Quality gate: PASS. Test plan covers unit/integration/E2E split aligned with
   80% and 60/30/10 governance goals.
-- Compliance gate: PASS. Post-design artifacts keep Anki/FSRS v4 fidelity and daily-
+- Compliance gate: PASS. Post-design artifacts keep Anki/FSRS v6 fidelity and daily-
   limit behavior intact.
 
 ## Project Structure

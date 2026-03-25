@@ -1,7 +1,7 @@
-# Phase 0 Research: FSRS v4 Spaced Repetition and Study Activity Logging
+# Phase 0 Research: FSRS v6 Spaced Repetition and Study Activity Logging
 
 ## Decision 1: Treat FSRS scheduling as a dedicated domain service
-- Decision: Implement all FSRS v4 rating math and state transitions in a single Spaced Repetition domain service consumed by study APIs.
+- Decision: Implement all FSRS v6 rating math and state transitions in a single Spaced Repetition domain service consumed by study APIs.
 - Rationale: Centralizing scheduling logic prevents drift between endpoints and keeps algorithm fidelity testable.
 - Alternatives considered: Embedding math in controller/service handlers (rejected due to duplication risk and weaker testability).
 

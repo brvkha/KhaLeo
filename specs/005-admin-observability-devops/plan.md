@@ -46,7 +46,7 @@ Initial Gate Assessment (Pre-Phase 0)
   no Flyway bypass is introduced.
 - Quality gate: PASS. Test strategy covers unit/integration/contract layers and
   remains aligned with 80% and 60/30/10 quality policy.
-- Compliance gate: PASS. Feature has no FSRS v4/card-state logic changes and
+- Compliance gate: PASS. Feature has no FSRS v6/card-state logic changes and
   explicitly preserves learning algorithm rules.
 
 Post-Design Re-check (Post-Phase 1)
@@ -65,7 +65,7 @@ Post-Design Re-check (Post-Phase 1)
   auditable action events and no violation of migration discipline.
 - Quality gate: PASS. Design artifacts define test coverage across authorization,
   moderation behavior, logging integration, and deployment contract behavior.
-- Compliance gate: PASS. Post-design artifacts state no impact on FSRS v4,
+- Compliance gate: PASS. Post-design artifacts state no impact on FSRS v6,
   card-state transitions, or account-level daily learning-limit logic.
 
 ## Project Structure

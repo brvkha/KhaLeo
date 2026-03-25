@@ -9,7 +9,7 @@
 
 Implement a fully automated infrastructure and deployment platform where:
 
-1. Push to `main` triggers CI automatically.
+1. CI and deploy workflows are executed with explicit operator control and approval.
 2. Approved production deployment applies immutable backend and frontend artifacts.
 3. Terraform is the source of truth for AWS + GitHub deployment contracts.
 4. DNS for `khaleoshop.click` routes users to CloudFront (frontend) and ALB (backend API).
@@ -18,8 +18,7 @@ Implement a fully automated infrastructure and deployment platform where:
 
 - **Frontend Path**: Route53 (`khaleoshop.click`) -> CloudFront -> S3 static bucket.
 - **Backend Path**: Route53 (`api.khaleoshop.click`) -> WAF -> ALB (public subnets) -> EC2 Auto Scaling Group in private subnets across `ap-southeast-1a`, `ap-southeast-1b`, `ap-southeast-1c`.
-- **Runtime**: EC2 runs Dockerized Spring Boot jar image.
-- **Runtime**: EC2 runs Spring Boot `.jar` managed by `systemd` (immutable JAR deployment). Deployment artifacts are uploaded to S3 and deployed to instances via SSM `SendCommand` to copy the artifact and restart the service.
+- **Runtime**: EC2 runs Spring Boot artifact via immutable image rollout (Packer-baked AMI and Auto Scaling instance refresh), with commit-SHA traceability.
 - **Data**: Aurora MySQL (core), DynamoDB (study activity logs).
 - **Media**: S3 presigned uploads for image/audio.
 - **Email**: SES for verification/reset.
@@ -39,13 +38,13 @@ Implement a fully automated infrastructure and deployment platform where:
 
 ### User Story 1 - One-Push Release Automation (Priority: P1)
 
-As a release owner, I can push to `main` and have CI and CD run automatically with approval gate so releases are predictable and hands-off.
+As a release owner, I can run CI and CD workflows with approval gates so releases are predictable, auditable, and controlled.
 
-**Independent Test**: Push to `main`, approve production environment, verify backend and frontend deploy complete with run summary.
+**Independent Test**: Run CI workflow, then trigger deploy workflows via `workflow_dispatch`, approve production environment, and verify backend/frontend deploy complete with run summary.
 
 **Acceptance Scenarios**:
 
-1. **Given** a push to `main`, **When** CI runs, **Then** backend and frontend quality gates must pass before deploy workflows execute.
+1. **Given** CI workflow runs, **When** quality gates pass, **Then** deploy workflows are eligible for approved execution.
 2. **Given** deploy approval is granted, **When** CD starts, **Then** backend artifact is rolled out to EC2 targets and frontend is synced to S3 with CloudFront invalidation.
 3. **Given** deployment fails on any backend target, **When** workflow completes, **Then** run is failed with target-specific diagnostics.
 
@@ -87,7 +86,7 @@ As a security owner, I can keep runtime credentials in AWS Secrets Manager and u
 - **FR-008**: Terraform MUST provision or reference DynamoDB table for study activity logs.
 - **FR-009**: Terraform MUST bootstrap GitHub `production` environment contracts (required secrets placeholders/variables where applicable).
 - **FR-010**: GitHub Actions MUST use OIDC role assumption and MUST NOT use long-lived AWS access keys.
-- **FR-011**: Backend CD MUST deploy immutable artifacts tagged by commit SHA and support manual rollback by SHA.
+- **FR-011**: Backend CD MUST deploy immutable artifacts tagged by commit SHA (including immutable AMI rollout) and support manual rollback by SHA.
 - **FR-012**: Frontend CD MUST sync built assets to S3 and invalidate CloudFront paths.
 - **FR-013**: Production deployment MUST require manual approval through GitHub Environment protection rules.
 - **FR-014**: Runtime app secrets MUST be read from AWS Secrets Manager, not committed to repository.
@@ -123,7 +122,7 @@ As a security owner, I can keep runtime credentials in AWS Secrets Manager and u
 
 ## Success Criteria
 
-- **SC-001**: 100% push-to-main runs trigger CI automatically.
+- **SC-001**: 100% documented CI and deploy workflows can be executed with expected approval gating and immutable artifact traceability.
 - **SC-002**: 100% production deploy runs require approval and use OIDC short-lived credentials.
 - **SC-003**: 100% successful deploy runs publish backend and frontend with immutable version traceability.
 - **SC-004**: DNS and TLS route both frontend and backend subdomain correctly.

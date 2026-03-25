@@ -57,7 +57,7 @@
   - One-to-many with `CardLearningState`.
 
 ### 4. CardLearningState
-- Purpose: Per-user FSRS v4 progression state for each card.
+- Purpose: Per-user FSRS v6 progression state for each card.
 - Fields:
   - `id` (UUID, PK)
   - `cardId` (UUID, FK -> Card.id, not null)

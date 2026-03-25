@@ -55,12 +55,13 @@ Grant the IAM role assumed by GitHub Actions via OIDC these capabilities:
 - SSM SendCommand + List/Get command invocation results.
 - EC2 DescribeInstances for deploy target discovery by tag.
 
-## 6. Branch and Workflow Model
+## 6. Workflow Model
 
-- PR to `main`: run `ci.yml` only (test/build checks).
-- Push/Merge to `main`: run `ci.yml`, then deploy workflows:
+- Run `ci.yml` for quality gates.
+- Trigger deploy workflows manually via `workflow_dispatch` after CI success:
   - `deploy-backend.yml`
   - `deploy-frontend.yml`
+- Both deploy workflows require `production` environment approval.
 
 ## 7. Push-to-Deploy Validation Checklist
 
@@ -71,7 +72,7 @@ Grant the IAM role assumed by GitHub Actions via OIDC these capabilities:
 5. Confirm backend deploy publishes commit-SHA jar and runs SSM rollout.
 6. Confirm application health endpoint returns success.
 7. Run route-policy smoke checks with fixture accounts from `../008-public-deck-clone/test-data.md`.
-8. Verify guest can open only `/decks`, and protected routes redirect to login with return target.
+8. Verify guest can open `/flashcard/decks` (and `/decks` alias), and protected routes redirect to login with return target.
 
 ### 7.1 Latest Validation Record
 
@@ -85,11 +86,11 @@ Feature branch: `006-frontend-and-full-cicd`
 | CI coverage gate configured | PASS | `.github/workflows/ci.yml` uses `npm run test:coverage` |
 | Backend deploy diagnostics and rollback hint | PASS | `.github/workflows/deploy-backend.yml` summary + rollback section |
 | Frontend deploy diagnostics and rollback hint | PASS | `.github/workflows/deploy-frontend.yml` failure summary + rollback hint |
-| End-to-end push-to-main workflow run | PENDING | Requires GitHub Actions run on `main` with `production` approval |
+| End-to-end gated deployment run | PENDING | Requires manual `workflow_dispatch` runs with `production` approval |
 
 Action pending before release:
 
-- Execute a real `push-to-main` dry run in GitHub Actions and attach run URLs to this section.
+- Execute real manual deploy runs in GitHub Actions and attach run URLs to this section.
 
 ## 8. Rollback (By Commit SHA)
 
@@ -109,5 +110,5 @@ Important:
 
 - Missing secret: workflow fails at credential step.
 - Wrong bucket/distribution IDs: deploy succeeds partially but site does not update.
-- SSM target tags mismatch: backend rollout dispatches to zero instances.
+- ASG/launch-template mismatch: backend immutable rollout fails during AMI bake or instance refresh.
 - IAM deny on CloudFront invalidation: frontend files upload but stale cache persists.

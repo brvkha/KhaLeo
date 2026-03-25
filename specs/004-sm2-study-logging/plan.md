@@ -1,4 +1,4 @@
-# Implementation Plan: FSRS v4 Spaced Repetition and Study Activity Logging
+# Implementation Plan: FSRS v6 Spaced Repetition and Study Activity Logging
 
 **Branch**: `004-sm2-study-logging` | **Date**: 2026-03-16 | **Spec**: `specs/004-sm2-study-logging/spec.md`
 **Input**: Feature specification from `/specs/004-sm2-study-logging/spec.md`
@@ -8,7 +8,7 @@
 ## Summary
 
 Deliver study-session core behavior by adding due-card retrieval and card-rating
-APIs that enforce account-level daily learning limits and FSRS v4 scheduling
+APIs that enforce account-level daily learning limits and FSRS v6 scheduling
 fidelity (`NEW` -> `LEARNING`/`REVIEW`, `REVIEW` -> `RELEARNING` on lapse), then emit
 asynchronous study activity logs to DynamoDB without blocking user-facing API
 responses. The design keeps scheduling state authoritative in Aurora MySQL,
@@ -30,7 +30,7 @@ rating, retrieval, and async logging outcomes.
 **Target Platform**: Dockerized Spring Boot backend on AWS EC2 private subnets behind ALB/WAF; Terraform-managed infra
 **Project Type**: Web application (replicated monolith with backend + frontend + IaC)  
 **Performance Goals**: 95% of rating requests return in <1s; 99% of successful ratings persist activity log entries within 30s; due-card fetch p95 <750ms at portfolio load  
-**Constraints**: FSRS v4 math fidelity with default 17-weight vector and retrievability formulas; account-level daily new-card limits; async DynamoDB writes must not block rating response path; REST + pagination for list endpoint  
+**Constraints**: FSRS v6 math fidelity with default 17-weight vector and retrievability formulas; account-level daily new-card limits; async DynamoDB writes must not block rating response path; REST + pagination for list endpoint  
 **Scale/Scope**: Backend study endpoints, scheduling service, async activity logging service, observability updates, and any additive Terraform alarm updates for expected load (~50 users, ~30 concurrent)
 
 ## Constitution Check
@@ -53,7 +53,7 @@ Initial Gate Assessment (Pre-Phase 0)
   receives immutable activity events; Flyway-only relational changes remain mandated.
 - Quality gate: PASS. Test strategy spans unit, integration, and contract layers
   to stay aligned with 80% and 60/30/10 policy targets.
-- Compliance gate: PASS. Feature directly implements constitution-critical FSRS v4,
+- Compliance gate: PASS. Feature directly implements constitution-critical FSRS v6,
   card-state transitions, and account-level daily learning limits.
 
 Post-Design Re-check (Post-Phase 1)
@@ -70,9 +70,9 @@ Post-Design Re-check (Post-Phase 1)
   retrieval, rating, and async log-write outcomes.
 - Data gate: PASS. Data model cleanly separates mutable relational scheduling
   state from immutable DynamoDB activity records.
-- Quality gate: PASS. Design artifacts define layered automated tests for FSRS v4
+- Quality gate: PASS. Design artifacts define layered automated tests for FSRS v6
   transition correctness, quota behavior, and async logging resilience.
-- Compliance gate: PASS. Post-design artifacts preserve FSRS v4 fidelity, required
+- Compliance gate: PASS. Post-design artifacts preserve FSRS v6 fidelity, required
   card states, and account-level daily learning-limit enforcement.
 
 ## Project Structure

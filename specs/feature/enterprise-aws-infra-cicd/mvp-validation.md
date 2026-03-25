@@ -16,7 +16,7 @@ Feature: enterprise-aws-infra-cicd
 - Result: 2 passed, 0 failed
 - Verified:
   - immutable artifact key path uses commit SHA (`backend/${{ steps.sha.outputs.value }}/app.jar`)
-  - SSM dispatch and polling contract exists
+  - immutable rollout contract exists (Packer build + ASG instance refresh)
   - rollback guidance is emitted
 
 ### Frontend US1 contract test
@@ -30,14 +30,14 @@ Feature: enterprise-aws-infra-cicd
 
 ## Workflow Contract Evidence
 
-### Push-to-main and approval-gated deploy flow
+### Manual gated deploy flow
 - `deploy-backend.yml`:
-  - Trigger path includes `workflow_run` from `CI`
-  - Branch gate requires `head_branch == 'main'`
+  - Trigger path includes `workflow_dispatch`
+  - Branch gate requires `github.ref_name == 'main'`
   - Job uses `environment: production`
 - `deploy-frontend.yml`:
-  - Trigger path includes `workflow_run` from `CI`
-  - Branch gate requires `head_branch == 'main'`
+  - Trigger path includes `workflow_dispatch`
+  - Branch gate requires `github.ref_name == 'main'`
   - Job uses `environment: production`
 - `ci.yml`:
   - `workflow-smoke-contract` job enforces deploy workflow gating semantics

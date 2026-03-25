@@ -49,7 +49,7 @@ Initial Gate Assessment (Pre-Phase 0)
   and optional authorization state; DynamoDB responsibilities remain unchanged.
 - Quality gate: PASS. Testing strategy is mapped to unit/integration/contract
   layers consistent with the 80% and 60/30/10 quality policy.
-- Compliance gate: PASS. No changes to FSRS v4 scheduling rules, card-state model,
+- Compliance gate: PASS. No changes to FSRS v6 scheduling rules, card-state model,
   or account-level daily learning limit behavior.
 
 Post-Design Re-check (Post-Phase 1)

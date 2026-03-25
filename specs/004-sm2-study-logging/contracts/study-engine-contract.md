@@ -1,20 +1,20 @@
-# Study Engine Contract: FSRS v4 Spaced Repetition and Study Activity Logging
+# Study Engine Contract: FSRS v6 Spaced Repetition and Study Activity Logging
 
 ## Purpose
 
-Define the public REST contract for due-card retrieval and card-rating operations under `/api/v1/study`.
+Define the public REST contract for due-card retrieval and card-rating operations under `/api/v1/study-session`.
 
 ## General Contract Rules
 
 - All endpoints return JSON.
 - Authenticated user context is required for all study endpoints.
 - User may only access cards in decks they are authorized to study.
-- Rating persistence in Aurora is synchronous for request success; activity logging to DynamoDB is asynchronous and non-blocking for response.
+- Rating persistence in MySQL is synchronous for request success; activity logging to DynamoDB is asynchronous and non-blocking for response.
 - Pagination is mandatory for list-producing next-cards endpoint.
 
 ## Endpoint Contracts
 
-### 1) GET `/api/v1/study/decks/{deckId}/next-cards`
+### 1) GET `/api/v1/study-session/decks/{deckId}/next-cards`
 
 - Auth: required.
 - Purpose: Retrieve due cards prioritized by urgency and daily-limit rules.
@@ -36,7 +36,7 @@ Define the public REST contract for due-card retrieval and card-rating operation
   - `403 Forbidden` deck inaccessible to caller.
   - `404 Not Found` unknown deck.
 
-### 2) POST `/api/v1/study/cards/{cardId}/rate`
+### 2) POST `/api/v1/study-session/cards/{cardId}/rate`
 
 - Auth: required.
 - Purpose: Apply learner rating and update scheduling state.
@@ -53,7 +53,7 @@ Define the public REST contract for due-card retrieval and card-rating operation
     - `newStability`
     - `newDifficulty`
 - Behavior contract:
-  - Applies FSRS v4 logic and state transitions.
+  - Applies FSRS v6 logic and state transitions.
   - Enforces FSRS parameterized D/S updates and retrievability-based interval calculation.
   - Triggers asynchronous activity log write with final schedule values.
 - Failure responses:

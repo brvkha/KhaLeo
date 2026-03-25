@@ -94,7 +94,7 @@ As a release engineer, I can build and deploy backend artifacts through an autom
 
 ### Constitutional Impact *(mandatory)*
 
-- **Algorithm Fidelity**: No impact on FSRS v4 scheduling calculations, card-state transitions, or account-level daily learning limits.
+- **Algorithm Fidelity**: No impact on FSRS v6 scheduling calculations, card-state transitions, or account-level daily learning limits.
 - **Security Impact**: High impact. Introduces privileged administration workflows that require strict role enforcement, auditable moderation actions, and secure handling of deployment and observability secrets.
 - **Observability Impact**: High impact. Requires structured log output suitable for centralized ingestion and traceable operational signals for admin actions and deployment outcomes.
 - **Infrastructure Impact**: High impact. Introduces an automated backend deployment path using artifact distribution and managed command execution to update private compute targets.
@@ -118,7 +118,7 @@ As a release engineer, I can build and deploy backend artifacts through an autom
 - **FR-013**: System MUST attempt deployment command dispatch to all intended targets in a run and mark the overall run failed if any target reports failure.
 - **FR-014**: Every list-producing API MUST define pagination behavior or explicitly state why no list endpoint exists for this feature. This feature introduces no list-producing endpoints.
 - **FR-015**: System MUST define required observability outputs for admin access denials, moderation actions, deployment execution results, and centralized logging delivery failures.
-- **FR-016**: System MUST preserve existing FSRS v4 scheduling fidelity, card-state transitions, and account-level daily learning limits without modification.
+- **FR-016**: System MUST preserve existing FSRS v6 scheduling fidelity, card-state transitions, and account-level daily learning limits without modification.
 - **FR-017**: System MUST NOT introduce a public unban API in this feature scope.
 - **FR-018**: System MUST publish backend artifacts as immutable commit-SHA versioned units and deploy by explicit version reference so rollbacks can redeploy a known artifact deterministically.
 

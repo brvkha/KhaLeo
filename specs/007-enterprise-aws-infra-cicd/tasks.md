@@ -37,7 +37,7 @@
 ## Phase 5: Verification and Handover
 
 - [ ] T020 Add Terraform validation/plan checks in CI for infrastructure drift detection in .github/workflows/ci.yml
-- [ ] T021 Execute push-to-main deployment rehearsal and capture evidence in specs/007-enterprise-aws-infra-cicd/quickstart.md
+- [ ] T021 Execute manual gated deployment rehearsal (CI + workflow_dispatch deploy) and capture evidence in specs/007-enterprise-aws-infra-cicd/quickstart.md
 - [ ] T022 Add operational runbook for incident response and rollback in KhaLeoDocs/cicd_runbook_and_iam_policies.md
 - [ ] T023 Update root release readiness checklist with infra automation requirements in README.md
 - [ ] T024 Mark completed tasks and attach command evidence links in specs/007-enterprise-aws-infra-cicd/tasks.md

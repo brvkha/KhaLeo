@@ -25,7 +25,7 @@
 - Rationale: Learners can selectively keep personalized notes while accepting upstream corrections where needed.
 - Alternatives considered: Global "all local" or "all cloud" decision (rejected because it is too coarse and increases bad-merge outcomes).
 
-## Decision 6: Preserve constitutional FSRS v4 fidelity while adding first-step timing guarantees
+## Decision 6: Preserve constitutional FSRS v6 fidelity while adding first-step timing guarantees
 - Decision: Keep existing Anki-style scheduler behavior for non-new cards and explicitly enforce new-card first-step timings (`Again=1m`, `Hard=6m`, `Good=10m`, `Easy=1d`).
 - Rationale: Meets clarified UX expectation without introducing algorithm drift for mature cards.
 - Alternatives considered: Replace scheduler wholesale with custom rules (rejected due to constitutional risk and regression surface).
