@@ -35,8 +35,11 @@ public interface CardRepository extends JpaRepository<Card, UUID> {
     @Query("""
             select c from Card c
             where c.deck.id = :deckId
-                and (:frontText is null or lower(coalesce(c.frontText, '')) like lower(concat('%', :frontText, '%')))
-                and (:backText is null or lower(coalesce(c.backText, '')) like lower(concat('%', :backText, '%')))
+                and (
+                    (:frontText is null and :backText is null)
+                    or (:frontText is not null and lower(coalesce(c.frontText, '')) like lower(concat('%', :frontText, '%')))
+                    or (:backText is not null and lower(coalesce(c.backText, '')) like lower(concat('%', :backText, '%')))
+                )
                 and (:vocabulary is null or lower(coalesce(c.frontText, '')) = lower(:vocabulary) or lower(coalesce(c.backText, '')) = lower(:vocabulary))
             """)
     Page<Card> searchInDeck(
