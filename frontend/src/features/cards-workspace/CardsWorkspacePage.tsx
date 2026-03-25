@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import {
   createPrivateCard,
   createPrivateDeck,
@@ -9,6 +9,7 @@ import {
   updatePrivateCard,
   updatePrivateDeck,
 } from '../../services/privateWorkspaceApi'
+import { AddCardModal } from '../../components/AddCardModal'
 
 type DeckOption = {
   id: string
@@ -23,13 +24,13 @@ type CardItem = {
   backText: string
 }
 
+const CARDS_PER_PAGE = 50
+
 export function CardsWorkspacePage() {
   const [decks, setDecks] = useState<DeckOption[]>([])
   const [selectedDeckId, setSelectedDeckId] = useState('')
   const [cards, setCards] = useState<CardItem[]>([])
   const [search, setSearch] = useState('')
-  const [front, setFront] = useState('')
-  const [back, setBack] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [newDeckName, setNewDeckName] = useState('')
@@ -41,6 +42,11 @@ export function CardsWorkspacePage() {
   const [editingCardId, setEditingCardId] = useState<string | null>(null)
   const [editCardFront, setEditCardFront] = useState('')
   const [editCardBack, setEditCardBack] = useState('')
+  const [showAddCardModal, setShowAddCardModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreCards, setHasMoreCards] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const cardsContainerRef = useRef<HTMLDivElement>(null)
 
   const loadDecks = async () => {
     try {
@@ -58,21 +64,59 @@ export function CardsWorkspacePage() {
     void loadDecks()
   }, [])
 
-  // Debounced search for cards
+  // Search and load cards on deck/search change
   useEffect(() => {
     if (!selectedDeckId) {
       setCards([])
+      setCurrentPage(0)
       return
     }
 
     const timer = setTimeout(() => {
-      void searchPrivateDeckCards(selectedDeckId, search)
-        .then((items) => setCards(items))
+      void searchPrivateDeckCards(selectedDeckId, search, 0, CARDS_PER_PAGE)
+        .then((items) => {
+          setCards(items)
+          setCurrentPage(0)
+          setHasMoreCards(items.length === CARDS_PER_PAGE)
+        })
         .catch((err) => setError(err instanceof Error ? err.message : 'Failed to search cards'))
     }, 300)
 
     return () => clearTimeout(timer)
   }, [selectedDeckId, search])
+
+  // Infinite scroll handler
+  const handleScroll = useCallback(() => {
+    if (!cardsContainerRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = cardsContainerRef.current
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 200
+
+    if (isNearBottom && hasMoreCards && !isLoadingMore && selectedDeckId) {
+      void loadMoreCards()
+    }
+  }, [hasMoreCards, isLoadingMore, selectedDeckId])
+
+  const loadMoreCards = async () => {
+    if (isLoadingMore || !hasMoreCards || !selectedDeckId) return
+
+    setIsLoadingMore(true)
+    try {
+      const nextPage = currentPage + 1
+      const newCards = await searchPrivateDeckCards(
+        selectedDeckId,
+        search,
+        nextPage,
+        CARDS_PER_PAGE,
+      )
+      setCards((prev) => [...prev, ...newCards])
+      setCurrentPage(nextPage)
+      setHasMoreCards(newCards.length === CARDS_PER_PAGE)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load more cards')
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
 
   const handleCreateDeck = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -155,13 +199,31 @@ export function CardsWorkspacePage() {
         frontText: editCardFront.trim(),
         backText: editCardBack.trim(),
       })
-      const items = await searchPrivateDeckCards(selectedDeckId, search)
+      const items = await searchPrivateDeckCards(selectedDeckId, search, 0, CARDS_PER_PAGE)
       setCards(items)
       setSuccess('Card updated')
       cancelEditCard()
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update card')
+    }
+  }
+
+  const handleAddCard = async (front: string, back: string) => {
+    if (!selectedDeckId) return
+    try {
+      setError('')
+      await createPrivateCard({
+        deckId: selectedDeckId,
+        frontText: front,
+        backText: back,
+      })
+      const items = await searchPrivateDeckCards(selectedDeckId, search, 0, CARDS_PER_PAGE)
+      setCards(items)
+      setSuccess('Card added')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create card')
     }
   }
 
@@ -183,7 +245,7 @@ export function CardsWorkspacePage() {
         </div>
       )}
 
-      <div className="flex flex-1 gap-4 overflow-hidden p-4">
+      <div className="flex flex-1 gap-4 overflow-hidden">
         {/* Left Panel: Decks List */}
         <div className="w-44 flex flex-col border border-slate-200 rounded bg-white overflow-hidden">
           <div className="border-b border-slate-200 p-4">
@@ -316,57 +378,38 @@ export function CardsWorkspacePage() {
           {selectedDeck ? (
             <>
               <div className="border-b border-slate-200 p-4">
-                <h2 className="font-semibold text-slate-900">{selectedDeck.name}</h2>
-                <p className="text-sm text-slate-600 mt-1">{cards.length} cards</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-slate-900">{selectedDeck.name}</h2>
+                    <p className="text-sm text-slate-600 mt-1">{cards.length} cards loaded</p>
+                  </div>
+                  <button
+                    onClick={() => setShowAddCardModal(true)}
+                    className="rounded bg-emerald-600 px-4 py-2 text-white text-sm hover:bg-emerald-700"
+                  >
+                    + Add Card
+                  </button>
+                </div>
               </div>
 
-              <div className="p-4 border-b border-slate-200">
+              <div className="border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-3">
                 <input
                   id="private-card-search"
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                  className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
                   placeholder="Search cards..."
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
+                <span className="text-xs text-slate-500 whitespace-nowrap">
+                  {cards.length} {cards.length === 1 ? 'card' : 'cards'}
+                </span>
               </div>
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  if (!selectedDeckId || !front.trim() || !back.trim()) return
-                  void createPrivateCard({
-                    deckId: selectedDeckId,
-                    frontText: front.trim(),
-                    backText: back.trim(),
-                  })
-                    .then(() => {
-                      setFront('')
-                      setBack('')
-                      return searchPrivateDeckCards(selectedDeckId, search)
-                    })
-                    .then((items) => setCards(items))
-                    .catch((err) => setError(err instanceof Error ? err.message : 'Failed to create card'))
-                }}
-                className="p-4 border-b border-slate-200 grid grid-cols-4 gap-2"
+              <div
+                className="flex-1 overflow-auto"
+                ref={cardsContainerRef}
+                onScroll={handleScroll}
               >
-                <input
-                  className="rounded border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="Front"
-                  value={front}
-                  onChange={(e) => setFront(e.target.value)}
-                />
-                <input
-                  className="rounded border border-slate-300 px-3 py-2 text-sm col-span-2"
-                  placeholder="Back"
-                  value={back}
-                  onChange={(e) => setBack(e.target.value)}
-                />
-                <button className="rounded bg-emerald-600 px-3 py-2 text-white text-sm hover:bg-emerald-700">
-                  Add
-                </button>
-              </form>
-
-              <div className="flex-1 overflow-auto">
                 {cards.length === 0 ? (
                   <div className="p-4 text-center text-sm text-slate-500">No cards found</div>
                 ) : (
@@ -391,18 +434,19 @@ export function CardsWorkspacePage() {
                                 onChange={(e) => setEditCardFront(e.target.value)}
                               />
                             ) : (
-                              <p className="truncate">{card.frontText}</p>
+                              <p className="whitespace-pre-wrap">{card.frontText}</p>
                             )}
                           </td>
                           <td className="p-3 text-slate-600">
                             {editingCardId === card.id ? (
-                              <input
+                              <textarea
                                 className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                                rows={3}
                                 value={editCardBack}
                                 onChange={(e) => setEditCardBack(e.target.value)}
                               />
                             ) : (
-                              <p className="truncate">{card.backText}</p>
+                              <p className="max-h-24 overflow-y-auto whitespace-pre-wrap">{card.backText}</p>
                             )}
                           </td>
                           <td className="p-3 text-right">
@@ -436,8 +480,12 @@ export function CardsWorkspacePage() {
                                     className="rounded bg-rose-600 px-3 py-1 text-white text-xs hover:bg-rose-700"
                                     onClick={() => {
                                       void deletePrivateCard(card.id)
-                                        .then(() => searchPrivateDeckCards(selectedDeckId, search))
-                                        .then((items) => setCards(items))
+                                        .then(() => searchPrivateDeckCards(selectedDeckId, search, 0, CARDS_PER_PAGE))
+                                        .then((items) => {
+                                          setCards(items)
+                                          setCurrentPage(0)
+                                          setHasMoreCards(items.length === CARDS_PER_PAGE)
+                                        })
                                         .catch((err) => setError(err instanceof Error ? err.message : 'Failed to delete card'))
                                     }}
                                   >
@@ -452,6 +500,11 @@ export function CardsWorkspacePage() {
                     </tbody>
                   </table>
                 )}
+                {isLoadingMore && (
+                  <div className="p-4 text-center text-sm text-slate-500">
+                    Loading more cards...
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -461,6 +514,14 @@ export function CardsWorkspacePage() {
           )}
         </div>
       </div>
+
+      <AddCardModal
+        isOpen={showAddCardModal}
+        onClose={() => setShowAddCardModal(false)}
+        onSubmit={handleAddCard}
+        deckName={selectedDeck?.name || 'New Deck'}
+      />
     </section>
   )
 }
+

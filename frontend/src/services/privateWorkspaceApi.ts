@@ -69,10 +69,10 @@ export async function deletePrivateDeck(deckId: string): Promise<void> {
   })
 }
 
-export async function searchPrivateDeckCards(deckId: string, query: string): Promise<PrivateCardDto[]> {
+export async function searchPrivateDeckCards(deckId: string, query: string, pageNum = 0, pageSize = 50): Promise<PrivateCardDto[]> {
   const encoded = encodeURIComponent(query)
   const page = await requestJson<PagedResponse<PrivateCardDto>>(
-    `/api/v1/private/decks/${deckId}/cards/search?frontText=${encoded}&page=0&size=50`,
+    `/api/v1/private/decks/${deckId}/cards/search?frontText=${encoded}&page=${pageNum}&size=${pageSize}`,
   )
   return page.content
 }

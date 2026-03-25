@@ -35,8 +35,9 @@ management:
 app:
   seed:
     local-dev:
-      enabled: ${APP_SEED_LOCAL_DEV_ENABLED:false}
+      enabled: ${APP_SEED_LOCAL_DEV_ENABLED:true}
       default-password: ${APP_SEED_LOCAL_DEV_PASSWORD:khaleo}
+      reset-on-startup: ${APP_SEED_LOCAL_DEV_RESET_ON_STARTUP:true}
   study:
     next-cards:
       default-page-size: ${STUDY_NEXT_CARDS_DEFAULT_PAGE_SIZE:20}

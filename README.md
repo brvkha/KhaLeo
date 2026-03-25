@@ -1,60 +1,56 @@
 # KhaLeo
 
-Flashcard learning platform with Spring Boot backend, React frontend, and AWS deployment automation.
+KhaLeo is a flashcard learning platform with:
 
-## Release Readiness Checklist
+- Spring Boot backend (`backend`)
+- React + Vite frontend (`frontend`)
 
-Before approving production release:
+## Quick Start (Local)
 
-- [ ] Backend CI checks pass (`mvn test`, package build).
-- [ ] Frontend CI checks pass (`lint`, `test:coverage`, `build`).
-- [ ] Deploy workflows use OIDC role and environment `production` approval gate.
-- [ ] Artifact SHA selected for release and documented.
-- [ ] Runtime secrets exist in AWS Secrets Manager (`khaleo/prod/*`).
-- [ ] Rollback SHA is identified and confirmed deployable.
-- [ ] Post-deploy health checks pass (`/actuator/health`, frontend smoke).
+1. Reset local database to clean default state:
 
-## Core Paths
+```powershell
+cd backend
+./scripts/reset-local-database.ps1
+```
 
-- Backend: `backend/`
-- Frontend: `frontend/`
-- Terraform: `infra/terraform/`
-- Feature specs: `specs/`
+2. Run backend (choose one):
 
-## Enterprise CI/CD Contract (Phase 1-2)
+```powershell
+cd backend
+mvn spring-boot:run
+```
 
-- Terraform is the source of truth for AWS deploy contracts and GitHub production environment configuration.
-- CI (`.github/workflows/ci.yml`) runs Terraform format/validate/speculative plan plus backend/frontend quality gates.
-- Deploy workflows must assume AWS role via OIDC and use immutable artifact-by-SHA paths.
-- Backend deploy uses immutable AMI bake (artifact SHA -> AMI -> ASG instance refresh) so replacement EC2 instances always boot with a pre-baked app binary.
-- Runtime secrets are sourced from AWS Secrets Manager (`khaleo/prod/*`) and never committed.
+or run `FlashcardBackendApplication` from IntelliJ.
 
-### Minimum Production Environment Values
+3. Run frontend:
 
-Secrets:
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
 
-- `AWS_ROLE_TO_ASSUME`
-- `AWS_REGION`
-- `ARTIFACT_BUCKET`
-- `FRONTEND_S3_BUCKET`
-- `CLOUDFRONT_DISTRIBUTION_ID`
-- `DEPLOY_TARGET_TAG_KEY`
-- `DEPLOY_TARGET_TAG_VALUE`
-- `DEPLOY_SERVICE_NAME`
+## Seeded Local Data
 
-Variables:
+Local seed is enabled by default in non-production and resets on startup.
 
-- `BACKEND_BASE_URL`
-- `APP_ENV`
-- `JAVA_VERSION`
-- `NODE_VERSION`
-- `DB_SECRET_ID`
-- `JWT_SECRET_ID`
-- `SES_SECRET_ID`
-- `RUNTIME_ENV_PATH`
+Default login password: `khaleo`
 
-## Release Evidence And Runbooks
+- `admin@khaleo.app`
+- `khaleo@khaleo.app`
+- `learner+01@khaleo.app`
+- `learner+02@khaleo.app`
+- `learner+03@khaleo.app`
+- `learner+04@khaleo.app`
+- `learner+05@khaleo.app`
+- `learner+blocked@khaleo.app`
+- `learner+unverified@khaleo.app`
 
-- MVP validation evidence: `specs/feature/enterprise-aws-infra-cicd/mvp-validation.md`
-- Quickstart validation status: `specs/feature/enterprise-aws-infra-cicd/quickstart-validation.md`
-- Rollback runbook: `specs/feature/enterprise-aws-infra-cicd/quickstart.md#7-manual-rollback-by-sha`
+Seed includes diverse study decks and a large English deck (`EN-VOC-CORE-1500`) with 1500 cards.
+
+## Project Layout
+
+- `backend`: API, scheduler, persistence, local seed
+- `frontend`: web app UI
+- `infra`: deployment IaC and packer/terraform assets

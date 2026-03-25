@@ -10,11 +10,41 @@ import { useAuthStore } from '../../store/authStore'
 type SettingsTab = 'general' | 'algorithm'
 const REQUIRED_FSRS_WEIGHT_COUNT = 19
 const DEFAULT_FSRS_WEIGHTS = [
-  1.2682, 1.2682, 6.4994, 16.1563,
-  6.9135, 0.6470, 2.5935, 0.0010,
-  1.7036, 0.1711, 1.1668, 2.0287,
+  1.2682, 1.2682, 0.7310, 1.7540,
+  7.9650, 0.6470, 2.5935, 0.0010,
+  1.2670, 0.1510, 1.5040, 2.0287,
   0.0767, 0.4215, 2.5117, 0.2713,
-  3.6253, 0.4372, 0.0468,
+  1.3240, 0.4372, 0.0468,
+]
+
+type WeightMeta = {
+  index: number
+  key: string
+  label: string
+  description: string
+  color: string
+}
+
+const WEIGHT_META: WeightMeta[] = [
+  { index: 0, key: 'init_stability_again', label: 'Init Stability (Again)', description: 'Do on dinh khoi tao khi danh gia Again', color: '#dc2626' },
+  { index: 1, key: 'init_stability_hard', label: 'Init Stability (Hard)', description: 'Do on dinh khoi tao khi danh gia Hard', color: '#ea580c' },
+  { index: 2, key: 'init_stability_good', label: 'Init Stability (Good)', description: 'Do on dinh khoi tao khi danh gia Good', color: '#16a34a' },
+  { index: 3, key: 'init_stability_easy', label: 'Init Stability (Easy)', description: 'Do on dinh khoi tao khi danh gia Easy', color: '#2563eb' },
+  { index: 4, key: 'init_difficulty_base', label: 'Init Difficulty Base', description: 'Gia tri nen cua do kho khoi tao', color: '#0f766e' },
+  { index: 5, key: 'init_difficulty_delta', label: 'Init Difficulty Delta', description: 'Do lech do kho theo rating luc khoi tao', color: '#0f766e' },
+  { index: 6, key: 'difficulty_update_slope', label: 'Difficulty Update Slope', description: 'He so cap nhat do kho sau moi lan review', color: '#7c3aed' },
+  { index: 7, key: 'reserved_w7', label: 'Reserved (w7)', description: 'Tham so du phong cho cong thuc mo rong', color: '#7c3aed' },
+  { index: 8, key: 'recall_growth_base', label: 'Recall Growth Base', description: 'Nen tang truong stability khi nho dung', color: '#0891b2' },
+  { index: 9, key: 'recall_stability_decay', label: 'Recall Stability Decay', description: 'Do giam anh huong khi stability da cao', color: '#0891b2' },
+  { index: 10, key: 'recall_retrievability_gain', label: 'Recall Retrievability Gain', description: 'Do nhay theo retrievability khi nho dung', color: '#0891b2' },
+  { index: 11, key: 'forget_base', label: 'Forget Base', description: 'Nen tinh stability khi quen', color: '#be123c' },
+  { index: 12, key: 'forget_difficulty_exp', label: 'Forget Difficulty Exponent', description: 'Mu theo do kho trong cong thuc quen', color: '#be123c' },
+  { index: 13, key: 'forget_stability_exp', label: 'Forget Stability Exponent', description: 'Mu theo stability truoc do trong cong thuc quen', color: '#be123c' },
+  { index: 14, key: 'forget_retrievability_gain', label: 'Forget Retrievability Gain', description: 'Do nhay theo retrievability khi quen', color: '#be123c' },
+  { index: 15, key: 'hard_penalty', label: 'Hard Penalty', description: 'He so phat cho danh gia Hard', color: '#b45309' },
+  { index: 16, key: 'easy_bonus', label: 'Easy Bonus', description: 'He so thuong cho danh gia Easy', color: '#1d4ed8' },
+  { index: 17, key: 'same_day_exponent', label: 'Same-day Exponent', description: 'He so cap nhat stability cho review trong ngay', color: '#4f46e5' },
+  { index: 18, key: 'same_day_offset', label: 'Same-day Offset', description: 'Do dich cho cong thuc same-day', color: '#4f46e5' },
 ]
 
 function normalizeWeights(rawWeights: number[]): string[] {
@@ -164,22 +194,27 @@ export function ProfilePage() {
           {weightError ? <p className="mt-3 text-sm text-rose-600">{weightError}</p> : null}
 
           {weights.length > 0 ? (
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {weights.map((value, index) => (
-                <label className="text-sm" key={`weight-${index}`}>
-                  <span>W{index}</span>
-                  <input
-                    className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-                    type="number"
-                    step="0.01"
-                    value={value}
-                    onChange={(event) => {
-                      setWeights((prev) => prev.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))
-                    }}
-                  />
-                </label>
-              ))}
-            </div>
+            <>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {WEIGHT_META.map((meta) => (
+                  <label className="rounded border border-slate-200 p-3 text-sm" key={`weight-${meta.index}`}>
+                    <span className="block font-medium text-slate-900">{meta.label}</span>
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      {meta.key} | w{meta.index} | {meta.description}
+                    </span>
+                    <input
+                      className="mt-2 w-full rounded border border-slate-300 px-3 py-2"
+                      type="number"
+                      step="0.0001"
+                      value={weights[meta.index] ?? ''}
+                      onChange={(event) => {
+                        setWeights((prev) => prev.map((item, itemIndex) => (itemIndex === meta.index ? event.target.value : item)))
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            </>
           ) : null}
 
           <div className="mt-4 flex gap-2">

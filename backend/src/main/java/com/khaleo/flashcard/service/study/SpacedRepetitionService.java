@@ -14,11 +14,11 @@ import org.springframework.stereotype.Service;
 public class SpacedRepetitionService {
 
         private static final double[] DEFAULT_WEIGHTS = {
-            1.2682, 1.2682, 6.4994, 16.1563,
-            6.9135, 0.6470, 2.5935, 0.0010,
-            1.7036, 0.1711, 1.1668, 2.0287,
+            1.2682, 1.2682, 0.7310, 1.7540,
+            7.9650, 0.6470, 2.5935, 0.0010,
+            1.2670, 0.1510, 1.5040, 2.0287,
             0.0767, 0.4215, 2.5117, 0.2713,
-            3.6253, 0.4372, 0.0468
+            1.3240, 0.4372, 0.0468
         };
         private static final double REQUEST_RETENTION = 0.9;
     private static final long MAX_INTERVAL = 36500;

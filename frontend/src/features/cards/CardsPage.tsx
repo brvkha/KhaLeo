@@ -58,14 +58,15 @@ export function CardsPage() {
         <input
           aria-label="Card front"
           className="rounded border border-slate-300 px-3 py-2"
-          placeholder="Front"
+          placeholder="Front (one concept)"
           value={front}
           onChange={(event) => setFront(event.target.value)}
         />
-        <input
+        <textarea
           aria-label="Card back"
           className="rounded border border-slate-300 px-3 py-2"
-          placeholder="Back"
+          placeholder="Back (explanation, examples, markdown, multiline)"
+          rows={4}
           value={back}
           onChange={(event) => setBack(event.target.value)}
         />
@@ -99,7 +100,7 @@ export function CardsPage() {
         {cards.map((card) => (
           <li className="rounded border border-slate-200 bg-white p-4" key={card.id}>
             <p className="font-medium">{card.front}</p>
-            <p className="text-sm text-slate-600">{card.back}</p>
+            <p className="max-h-32 overflow-y-auto whitespace-pre-wrap text-sm text-slate-600">{card.back}</p>
             {card.mediaUrl ? <p className="text-xs text-indigo-700">media: {card.mediaUrl}</p> : null}
             <button
               className="mt-2 rounded bg-rose-600 px-3 py-1 text-white"
