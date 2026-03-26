@@ -32,8 +32,13 @@ public class GlobalExceptionHandler {
             case DECK_NOT_FOUND, DECK_NOT_PUBLIC, CARD_NOT_FOUND, USER_NOT_FOUND, IMPORT_LINK_NOT_FOUND -> HttpStatus.NOT_FOUND;
             case INVALID_PAGINATION, INVALID_SEARCH_CRITERIA, INVALID_CONFLICT_RESOLUTION_CHOICE -> HttpStatus.BAD_REQUEST;
             case DUPLICATE_EMAIL -> HttpStatus.CONFLICT;
+            case OPTIMISTIC_LOCK_CONFLICT -> HttpStatus.CONFLICT;
             default -> HttpStatus.UNPROCESSABLE_ENTITY;
         };
+
+        if ("CARD_VALIDATION_PAYLOAD_TOO_LARGE".equals(ex.getMessage())) {
+            status = HttpStatus.PAYLOAD_TOO_LARGE;
+        }
 
         return ResponseEntity.status(status).body(Map.of(
                 "timestamp", Instant.now().toString(),

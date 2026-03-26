@@ -1,11 +1,11 @@
-package com.khaleo.flashcard.contract.study;
+package com.khaleo.flashcard.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.khaleo.flashcard.entity.Card;
 import com.khaleo.flashcard.entity.Deck;
 import com.khaleo.flashcard.entity.User;
@@ -15,6 +15,7 @@ import com.khaleo.flashcard.repository.CardRepository;
 import com.khaleo.flashcard.repository.DeckRepository;
 import com.khaleo.flashcard.repository.UserRepository;
 import com.khaleo.flashcard.service.auth.JwtTokenService;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc
 @Transactional
 @SuppressWarnings("null")
-class StudyRateCardContractTest extends IntegrationPersistenceTestBase {
+class RichCardContractTest extends IntegrationPersistenceTestBase {
 
     @Autowired
     private MockMvc mockMvc;
@@ -52,47 +53,72 @@ class StudyRateCardContractTest extends IntegrationPersistenceTestBase {
     private PasswordEncoder passwordEncoder;
 
     @Test
-    void shouldRateCardAndReturnSchedulingPayload() throws Exception {
-        User owner = saveUser("rate-contract-owner@example.com");
+    void shouldCreateRichCardWithDomainAgnosticPayload() throws Exception {
+        User owner = saveUser("rich-card-contract-owner@example.com");
         Deck deck = saveDeck(owner);
-        Card card = saveCard(deck);
 
-        String body = objectMapper.writeValueAsString(Map.of("rating", "GOOD", "timeSpentMs", 1200));
+        String body = objectMapper.writeValueAsString(Map.of(
+                "term", "Abstraction",
+                "answer", "Generalized representation",
+                "imageUrl", "https://images.unsplash.com/photo-1",
+                "partOfSpeech", "noun",
+                "phonetic", "ab-strak-shun",
+                "examples", List.of("Example one", "Example two")));
 
-        String response = mockMvc.perform(post("/api/v1/study/cards/{cardId}/rate", card.getId())
+        String response = mockMvc.perform(post("/api/v1/decks/{deckId}/cards", deck.getId())
                         .header("Authorization", bearerFor(owner))
                         .contentType("application/json")
                         .content(body))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
 
-        assertThat(response).contains("cardId");
-        assertThat(response).contains("state");
-        assertThat(response).contains("scheduledDays");
-        assertThat(response).contains("newStability");
-        assertThat(response).contains("newDifficulty");
-
-        JsonNode payload = objectMapper.readTree(response);
-        assertThat(payload.path("scheduledDays").asInt()).isGreaterThanOrEqualTo(0);
-        assertThat(payload.path("newStability").asDouble()).isGreaterThan(0.0d);
-        assertThat(payload.path("newDifficulty").asDouble()).isGreaterThan(0.0d);
+        assertThat(response).contains("term");
+        assertThat(response).contains("answer");
+        assertThat(response).contains("examples");
+        assertThat(response).contains("version");
     }
 
     @Test
-    void shouldRejectInvalidRatePayload() throws Exception {
-        User owner = saveUser("rate-contract-owner-2@example.com");
+    void shouldRejectRichCardWhenExampleIsWhitespaceOnly() throws Exception {
+        User owner = saveUser("rich-card-contract-owner-2@example.com");
         Deck deck = saveDeck(owner);
-        Card card = saveCard(deck);
 
-        String body = objectMapper.writeValueAsString(Map.of("rating", "GOOD", "timeSpentMs", -1));
+        String body = objectMapper.writeValueAsString(Map.of(
+                "term", "Abstraction",
+                "answer", "Generalized representation",
+                "examples", List.of("   ")));
 
-        mockMvc.perform(post("/api/v1/study/cards/{cardId}/rate", card.getId())
+        mockMvc.perform(post("/api/v1/decks/{deckId}/cards", deck.getId())
                         .header("Authorization", bearerFor(owner))
                         .contentType("application/json")
                         .content(body))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void shouldReturnConflictOnStaleVersionUpdate() throws Exception {
+        User owner = saveUser("rich-card-contract-owner-3@example.com");
+        Deck deck = saveDeck(owner);
+        Card card = cardRepository.saveAndFlush(Card.builder()
+                .deck(deck)
+                .frontText("Old term")
+                .backText("Old answer")
+                .examplesJson("[]")
+                .build());
+
+        String body = objectMapper.writeValueAsString(Map.of(
+                "term", "New term",
+                "answer", "New answer",
+                "examples", List.of(),
+                "version", 99));
+
+        mockMvc.perform(put("/api/v1/cards/{id}", card.getId())
+                        .header("Authorization", bearerFor(owner))
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isConflict());
     }
 
     private User saveUser(String email) {
@@ -112,14 +138,6 @@ class StudyRateCardContractTest extends IntegrationPersistenceTestBase {
                 .description("desc")
                 .isPublic(false)
                 .tags("tag")
-                .build());
-    }
-
-    private Card saveCard(Deck deck) {
-        return cardRepository.saveAndFlush(Card.builder()
-                .deck(deck)
-                .frontText("front")
-                .backText("back")
                 .build());
     }
 

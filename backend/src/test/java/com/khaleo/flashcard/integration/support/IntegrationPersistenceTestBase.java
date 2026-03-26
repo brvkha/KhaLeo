@@ -7,6 +7,9 @@ import org.testcontainers.containers.MySQLContainer;
 
 public abstract class IntegrationPersistenceTestBase {
 
+    // Shared DB container for persistence tests; FSRS v6 scheduling assertions must remain algorithm-invariant
+    // across rich-card content changes and should not depend on content projection fields.
+
     protected static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0.39")
             .withDatabaseName("khaleo_flashcard_test")
             .withUsername("khaleo")

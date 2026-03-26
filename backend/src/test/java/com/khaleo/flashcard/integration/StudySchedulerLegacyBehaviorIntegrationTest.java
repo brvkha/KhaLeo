@@ -33,4 +33,21 @@ class StudySchedulerLegacyBehaviorIntegrationTest {
         assertThat(outcome.stability()).isPositive();
         assertThat(outcome.difficulty()).isPositive();
     }
+
+    @Test
+    void shouldKeepAgainPathOnReviewStateInvariant() {
+        CardLearningState review = CardLearningState.builder()
+                .state(CardLearningStateType.REVIEW)
+                .fsrsDifficulty(java.math.BigDecimal.valueOf(5.0))
+                .fsrsStability(java.math.BigDecimal.valueOf(4.0))
+                .lastReviewedAt(Instant.now().minusSeconds(48L * 60L * 60L))
+                .build();
+
+        var outcome = studySchedulerService.apply(review, RatingGiven.AGAIN, Instant.now());
+
+        assertThat(outcome.state()).isEqualTo(CardLearningStateType.RELEARNING);
+        assertThat(outcome.scheduledDays()).isZero();
+        assertThat(outcome.stability()).isPositive();
+        assertThat(outcome.difficulty()).isPositive();
+    }
 }

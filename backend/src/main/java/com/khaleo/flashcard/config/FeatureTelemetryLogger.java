@@ -15,4 +15,8 @@ public class FeatureTelemetryLogger {
     public void warn(String event, Map<String, Object> attributes) {
         log.warn("event={} attributes={}", event, attributes);
     }
+
+    public void richCardValidation(String outcome, Map<String, Object> attributes) {
+        log.warn("event=rich_card_validation outcome={} attributes={}", outcome, attributes);
+    }
 }

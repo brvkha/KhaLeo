@@ -100,6 +100,8 @@ public class AuthExceptionHandler implements AuthenticationEntryPoint, AccessDen
             case USER_NOT_FOUND, DECK_NOT_FOUND, CARD_NOT_FOUND, MISSING_RELATIONSHIP -> HttpStatus.NOT_FOUND;
             case MEDIA_AUTH_RATE_LIMIT_EXCEEDED -> HttpStatus.TOO_MANY_REQUESTS;
             case DUPLICATE_EMAIL -> HttpStatus.CONFLICT;
+            case OPTIMISTIC_LOCK_CONFLICT -> HttpStatus.CONFLICT;
+            case VALIDATION_REJECTED -> HttpStatus.UNPROCESSABLE_ENTITY;
             default -> HttpStatus.BAD_REQUEST;
         };
     }

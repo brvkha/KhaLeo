@@ -11,6 +11,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -52,6 +53,24 @@ public class Card extends BaseAuditableEntity {
     @Column(name = "back_media_url", length = 2048)
     private String backMediaUrl;
 
+    @Column(name = "image_url", length = 2048)
+    private String imageUrl;
+
+    @Column(name = "part_of_speech", length = 64)
+    private String partOfSpeech;
+
+    @Column(name = "phonetic", length = 255)
+    private String phonetic;
+
+    @Builder.Default
+    @Column(name = "examples_json", nullable = false, columnDefinition = "text")
+    private String examplesJson = "[]";
+
+    @Version
+    @Builder.Default
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
     @Builder.Default
     @OneToMany(mappedBy = "card", fetch = FetchType.LAZY)
     private List<CardLearningState> learningStates = new ArrayList<>();
@@ -63,6 +82,10 @@ public class Card extends BaseAuditableEntity {
         frontMediaUrl = normalize(frontMediaUrl);
         backText = normalize(backText);
         backMediaUrl = normalize(backMediaUrl);
+        imageUrl = normalize(imageUrl);
+        partOfSpeech = normalize(partOfSpeech);
+        phonetic = normalize(phonetic);
+        examplesJson = normalizeExamplesJson(examplesJson);
 
         boolean hasFrontContent = hasValue(frontText) || hasValue(frontMediaUrl);
         boolean hasBackContent = hasValue(backText) || hasValue(backMediaUrl);
@@ -83,5 +106,28 @@ public class Card extends BaseAuditableEntity {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeExamplesJson(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "[]";
+        }
+        return value;
+    }
+
+    public String getTerm() {
+        return frontText;
+    }
+
+    public void setTerm(String term) {
+        this.frontText = term;
+    }
+
+    public String getAnswer() {
+        return backText;
+    }
+
+    public void setAnswer(String answer) {
+        this.backText = answer;
     }
 }

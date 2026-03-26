@@ -1,0 +1,277 @@
+openapi: 3.0.3
+info:
+  title: KhaLeo Rich Cards API
+  version: 1.0.0
+  description: API contract additions/updates for domain-agnostic rich card content.
+servers:
+  - url: /api/v1
+paths:
+  /decks/{deckId}/cards:
+    post:
+      summary: Create card with rich content fields
+      operationId: createRichCard
+      tags: [Cards]
+      parameters:
+        - in: path
+          name: deckId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardCreateRequest'
+            examples:
+              validRichCard:
+                value:
+                  term: Abstraction
+                  answer: Generalized representation
+                  imageUrl: https://images.unsplash.com/photo-1
+                  partOfSpeech: noun
+                  phonetic: ab-strak-shun
+                  examples:
+                    - Example one
+                    - Example two
+      responses:
+        '201':
+          description: Card created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+              examples:
+                created:
+                  value:
+                    id: 7f2f3b6f-4931-42b7-a080-92ea7e4350ed
+                    deckId: 95fc7d6d-1711-4f11-a023-9a4f2d128ac0
+                    term: Abstraction
+                    answer: Generalized representation
+                    imageUrl: https://images.unsplash.com/photo-1
+                    partOfSpeech: noun
+                    phonetic: ab-strak-shun
+                    examples:
+                      - Example one
+                      - Example two
+                    version: 0
+                    createdAt: '2026-03-26T09:20:00Z'
+                    updatedAt: '2026-03-26T09:20:00Z'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '413':
+          description: Payload too large (>64KB)
+  /cards/{cardId}:
+    put:
+      summary: Update card via full-object replace semantics
+      operationId: updateRichCard
+      tags: [Cards]
+      parameters:
+        - in: path
+          name: cardId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardUpdateRequest'
+            examples:
+              staleVersion:
+                value:
+                  term: Abstraction
+                  answer: Updated answer
+                  imageUrl: https://images.unsplash.com/photo-2
+                  partOfSpeech: noun
+                  phonetic: ab-strak-shun
+                  examples:
+                    - Updated example
+                  version: 1
+      responses:
+        '200':
+          description: Card updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Card not found
+        '409':
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionConflict'
+              examples:
+                conflict:
+                  value:
+                    code: CARD_VERSION_CONFLICT
+                    message: Card version conflict for cardId=7f2f3b6f-4931-42b7-a080-92ea7e4350ed
+                    currentVersion: 2
+                    currentUpdatedAt: '2026-03-26T10:10:00Z'
+        '413':
+          description: Payload too large (>64KB)
+    get:
+      summary: Get card rich content
+      operationId: getRichCard
+      tags: [Cards]
+      parameters:
+        - in: path
+          name: cardId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Card retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Card not found
+components:
+  responses:
+    ValidationError:
+      description: Field validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalidExample:
+              value:
+                code: CARD_VALIDATION_EXAMPLE_EMPTY
+                message: CARD_VALIDATION_EXAMPLE_EMPTY
+                details:
+                  - field: examples[0]
+                    reason: whitespace-only values are not allowed
+  schemas:
+    CardCreateRequest:
+      type: object
+      required: [term, answer, examples]
+      properties:
+        term:
+          type: string
+          minLength: 1
+          description: Plain text only, HTML escaped on render.
+        answer:
+          type: string
+          minLength: 1
+          description: Plain text only, HTML escaped on render.
+        imageUrl:
+          type: string
+          nullable: true
+          format: uri
+          pattern: '^https://.*'
+          description: Must be absolute HTTPS URL with host in configured allowlist.
+        partOfSpeech:
+          type: string
+          nullable: true
+        phonetic:
+          type: string
+          nullable: true
+        examples:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 300
+            description: Plain text only; whitespace-only values are invalid.
+    CardUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/CardCreateRequest'
+        - type: object
+          required: [version]
+          properties:
+            version:
+              type: integer
+              minimum: 0
+              description: Optimistic concurrency token.
+    CardResponse:
+      type: object
+      required: [id, deckId, term, answer, examples, version, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        deckId:
+          type: string
+          format: uuid
+        term:
+          type: string
+        answer:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+          format: uri
+        partOfSpeech:
+          type: string
+          nullable: true
+        phonetic:
+          type: string
+          nullable: true
+        examples:
+          type: array
+          items:
+            type: string
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    VersionConflict:
+      type: object
+      required: [code, message, currentVersion]
+      properties:
+        code:
+          type: string
+          example: CARD_VERSION_CONFLICT
+        message:
+          type: string
+        currentVersion:
+          type: integer
+        currentUpdatedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              reason:
+                type: string

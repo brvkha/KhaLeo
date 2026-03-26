@@ -3,6 +3,12 @@ import { requestJson } from './apiClient'
 export type StudySessionCardDto = {
   cardId: string
   deckId: string
+  term?: string
+  answer?: string
+  imageUrl?: string | null
+  partOfSpeech?: string | null
+  phonetic?: string | null
+  examples?: string[]
   frontText: string
   backText: string
   state: 'NEW' | 'LEARNING' | 'REVIEW' | 'RELEARNING' | 'MASTERED'
@@ -33,7 +39,12 @@ export async function getNextSessionCards(deckId: string): Promise<StudySessionC
   const response = await requestJson<NextCardsResponseDto>(
     `/api/v1/study-session/decks/${deckId}/next-cards?size=20`,
   )
-  return response.items
+  return response.items.map((item) => ({
+    ...item,
+    term: item.term ?? item.frontText,
+    answer: item.answer ?? item.backText,
+    examples: item.examples ?? [],
+  }))
 }
 
 export async function rateSessionCard(cardId: string, rating: RatingValue, timeSpentMs: number): Promise<RateCardResponseDto> {

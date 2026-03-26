@@ -7,7 +7,7 @@ import { CardsPage } from '../cards/CardsPage'
 import { StudyPage } from './StudyPage'
 
 describe('deck-card-study journey', () => {
-  it('creates deck and card then rates study card', async () => {
+  it('creates card then rates study card', async () => {
     const user = userEvent.setup()
 
     render(
@@ -16,18 +16,15 @@ describe('deck-card-study journey', () => {
       </MemoryRouter>,
     )
 
-    await user.type(screen.getByLabelText('Deck name'), 'Physics')
-    await user.type(screen.getByLabelText('Deck description'), 'Motion and force')
-    await user.click(screen.getByRole('button', { name: 'Create deck' }))
-    expect(screen.getByText('Physics')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Public Deck Discovery' })).toBeInTheDocument()
 
     render(
       <MemoryRouter>
         <CardsPage />
       </MemoryRouter>,
     )
-    await user.type(screen.getByLabelText('Card front'), 'What is velocity?')
-    await user.type(screen.getByLabelText('Card back'), 'Speed with direction')
+    await user.type(screen.getByLabelText('Card term'), 'What is velocity?')
+    await user.type(screen.getByLabelText('Card answer'), 'Speed with direction')
     await user.click(screen.getByRole('button', { name: 'Create card' }))
     expect(screen.getAllByText('What is velocity?').length).toBeGreaterThan(0)
 

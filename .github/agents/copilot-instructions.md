@@ -15,6 +15,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-13
 - Aurora MySQL (core relational), DynamoDB (study activity/event logs), S3 (frontend artifacts, backend immutable artifacts, media uploads), Secrets Manager (runtime secrets) (feature/enterprise-aws-infra-cicd)
 - Java 17 (Spring Boot backend), TypeScript (React frontend), Terraform HCL + Spring Web/Security/Data JPA, Hibernate, Flyway, React, Tailwind CSS, AWS SDK v2, JWT auth stack (008-public-deck-clone)
 - Aurora MySQL for transactional deck/card/scheduling state; DynamoDB for activity/event logs (008-public-deck-clone)
+- Java 17 (Spring Boot backend), TypeScript (React frontend), Terraform HCL + Spring Web/Security/Data JPA, Hibernate, Flyway, React, Tailwind CSS, Vitest, Playwright (009-domain-agnostic-rich-cards)
+- Aurora MySQL for card/deck domain data and migration; DynamoDB unchanged for activity logging (009-domain-agnostic-rich-cards)
 
 - Java 17 (backend), SQL (MySQL 8.0 dialect), Terraform HCL + Spring Boot, Spring Data JPA, Hibernate, Flyway, (001-core-database-entities)
 
@@ -35,9 +37,9 @@ tests/
 Java 17 (backend), SQL (MySQL 8.0 dialect), Terraform HCL: Follow standard conventions
 
 ## Recent Changes
+- 009-domain-agnostic-rich-cards: Added Java 17 (Spring Boot backend), TypeScript (React frontend), Terraform HCL + Spring Web/Security/Data JPA, Hibernate, Flyway, React, Tailwind CSS, Vitest, Playwright
 - 008-public-deck-clone: Added Java 17 (Spring Boot backend), TypeScript (React frontend), Terraform HCL + Spring Web/Security/Data JPA, Hibernate, Flyway, React, Tailwind CSS, AWS SDK v2, JWT auth stack
 - feature/enterprise-aws-infra-cicd: Added Java 17 (Spring Boot backend), TypeScript + React 19 (frontend), Terraform >= 1.2, GitHub Actions YAML + Spring Boot, Hibernate, Flyway, React, Tailwind CSS, Vitest/Playwright, AWS provider (`hashicorp/aws`), GitHub provider (`integrations/github`)
-- 005-admin-observability-devops: Added Java 17 (Spring Boot 3.3.2), SQL (Aurora MySQL via Flyway), Terraform HCL, GitHub Actions YAML + Spring Web, Spring Security, Spring Data JPA/Hibernate, Flyway, AWS SDK v2 (S3/SES/DynamoDB), Splunk Java Logging Library, JUnit 5/Testcontainers
 
 
 <!-- MANUAL ADDITIONS START -->

@@ -11,7 +11,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         type:
@@ -20,7 +20,8 @@ spring:
 
   flyway:
     enabled: true
-    baseline-on-migrate: true
+    clean-disabled: false
+    validate-on-migrate: false
     locations: classpath:db/migration
 
 logging:
@@ -83,6 +84,13 @@ app:
     newrelic:
       agent-enabled: ${NEW_RELIC_AGENT_ENABLED:false}
       app-name: ${NEW_RELIC_APP_NAME:flashcard-backend}
+  rich-card:
+    image:
+      allowlist-hosts: ${RICH_CARD_IMAGE_ALLOWLIST_HOSTS:images.unsplash.com,cdn.pixabay.com,upload.wikimedia.org}
+    limits:
+      max-examples: ${RICH_CARD_MAX_EXAMPLES:20}
+      max-example-length: ${RICH_CARD_MAX_EXAMPLE_LENGTH:300}
+      max-payload-bytes: ${RICH_CARD_MAX_PAYLOAD_BYTES:65536}
 
 ---
 spring:

@@ -7,6 +7,7 @@ import {
   type StudyRatingPreviewsDto,
   type StudySessionCardDto,
 } from '../../services/studySessionApi'
+import { RichCardContent } from './RichCardContent'
 
 type UiRating = 'Again' | 'Hard' | 'Good' | 'Easy'
 
@@ -180,23 +181,13 @@ export function StudySessionPage() {
               type="button"
             >
               <div className="rounded-3xl border border-slate-300 bg-gradient-to-br from-white to-slate-100 p-6 shadow-sm">
-                {revealed ? (
-                  <div className="space-y-4">
-                    <p className="text-2xl font-semibold text-slate-900">{current.frontText}</p>
-                    <div className="h-px bg-slate-300" />
-                    <p className="text-xl text-slate-700">{current.backText}</p>
-                  </div>
-                ) : (
-                  <div className="min-h-64 flex items-center justify-center text-center">
-                    <p className="text-3xl font-semibold text-slate-900">{current.frontText}</p>
-                  </div>
-                )}
+                <RichCardContent card={current} revealed={revealed} />
               </div>
             </button>
           </div>
 
           {revealed ? (
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="study-rating-bar mt-5 flex flex-wrap gap-3">
               {uiRatings.map((value) => (
                 <div key={value} className="flex flex-col items-center">
                   <button

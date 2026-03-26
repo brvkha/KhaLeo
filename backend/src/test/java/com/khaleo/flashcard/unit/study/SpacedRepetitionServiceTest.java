@@ -84,4 +84,32 @@ class SpacedRepetitionServiceTest {
         assertThat(outcome.reps()).isEqualTo(5);
         assertThat(outcome.elapsedDays()).isGreaterThanOrEqualTo(1);
     }
+
+    @Test
+    void shouldRemainDeterministicForSameFsrsInputState() {
+        Instant now = Instant.parse("2026-03-26T10:00:00Z");
+
+        CardLearningState left = CardLearningState.builder()
+                .state(CardLearningStateType.REVIEW)
+                .fsrsDifficulty(BigDecimal.valueOf(5.2))
+                .fsrsStability(BigDecimal.valueOf(3.9))
+                .fsrsReps(8)
+                .fsrsLapses(1)
+                .lastReviewedAt(now.minusSeconds(3L * 24L * 60L * 60L))
+                .build();
+
+        CardLearningState right = CardLearningState.builder()
+                .state(CardLearningStateType.REVIEW)
+                .fsrsDifficulty(BigDecimal.valueOf(5.2))
+                .fsrsStability(BigDecimal.valueOf(3.9))
+                .fsrsReps(8)
+                .fsrsLapses(1)
+                .lastReviewedAt(now.minusSeconds(3L * 24L * 60L * 60L))
+                .build();
+
+        SpacedRepetitionService.RatingOutcome first = service.apply(left, RatingGiven.GOOD, now);
+        SpacedRepetitionService.RatingOutcome second = service.apply(right, RatingGiven.GOOD, now);
+
+        assertThat(first).isEqualTo(second);
+    }
 }

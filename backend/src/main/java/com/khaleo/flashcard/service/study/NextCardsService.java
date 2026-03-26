@@ -75,6 +75,7 @@ public class NextCardsService {
                 ? List.of()
                 : cardRepository.findUnseenCardsInDeck(deckId, userId, PageRequest.of(0, newQuota));
 
+        // Projection can evolve (rich-card fields) but scheduling order and FSRS state transitions remain unchanged.
         List<StudyCardSummary> ordered = new ArrayList<>(dueLearning.size() + dueReview.size() + newCards.size());
         dueLearning.forEach(state -> ordered.add(StudyCardSummary.fromLearningState(state, "LEARNING_DUE")));
         dueReview.forEach(state -> ordered.add(StudyCardSummary.fromLearningState(state, "REVIEW_DUE")));

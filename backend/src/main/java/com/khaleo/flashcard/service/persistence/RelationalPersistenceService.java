@@ -1,5 +1,8 @@
 package com.khaleo.flashcard.service.persistence;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.khaleo.flashcard.config.FeatureTelemetryLogger;
 import com.khaleo.flashcard.entity.Card;
 import com.khaleo.flashcard.entity.CardLearningState;
 import com.khaleo.flashcard.entity.Deck;
@@ -16,15 +19,22 @@ import com.khaleo.flashcard.repository.ReimportMergeConflictRepository;
 import com.khaleo.flashcard.service.activitylog.StudyActivityLogPublisher;
 import com.khaleo.flashcard.service.media.MediaReferenceService;
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +57,21 @@ public class RelationalPersistenceService {
     private final DeckCardAccessGuard deckCardAccessGuard;
     private final MediaReferenceService mediaReferenceService;
     private final NewRelicDeckMediaInstrumentation deckMediaInstrumentation;
+    private final FeatureTelemetryLogger telemetryLogger;
+
+    @Value("${app.rich-card.image.allowlist-hosts:}")
+    private String imageAllowlistHosts;
+
+    @Value("${app.rich-card.limits.max-examples:20}")
+    private int maxExamples;
+
+    @Value("${app.rich-card.limits.max-example-length:300}")
+    private int maxExampleLength;
+
+    @Value("${app.rich-card.limits.max-payload-bytes:65536}")
+    private int maxPayloadBytes;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public User createUser(CreateUserRequest request) {
         try {
@@ -200,12 +225,19 @@ public class RelationalPersistenceService {
         }
 
         try {
+            validateRichCardRequest(request.term(), request.answer(), request.imageUrl(), request.examples());
+
+            String examplesJson = writeExamplesJson(normalizeExamples(request.examples()));
             Card card = Card.builder()
                     .deck(deck)
-                    .frontText(request.frontText())
-                    .frontMediaUrl(request.frontMediaUrl())
-                    .backText(request.backText())
-                    .backMediaUrl(request.backMediaUrl())
+                    .frontText(request.term())
+                    .backText(request.answer())
+                .frontMediaUrl(request.imageUrl())
+                .backMediaUrl(request.imageUrl())
+                .imageUrl(request.imageUrl())
+                .partOfSpeech(normalizePlainText(request.partOfSpeech()))
+                .phonetic(normalizePlainText(request.phonetic()))
+                .examplesJson(examplesJson)
                     .build();
 
             Card saved = cardRepository.save(card);
@@ -259,18 +291,24 @@ public class RelationalPersistenceService {
         String beforeFront = card.getFrontMediaUrl();
         String beforeBack = card.getBackMediaUrl();
 
-        if (request.frontText() != null) {
-            card.setFrontText(request.frontText());
+        if (request.version() != null && !Objects.equals(card.getVersion(), request.version())) {
+            telemetryLogger.warn("rich_card_version_conflict", java.util.Map.of("cardId", cardId));
+            throw new PersistenceValidationException(
+                    PersistenceValidationException.PersistenceErrorCode.OPTIMISTIC_LOCK_CONFLICT,
+                    "Card version conflict for cardId=" + cardId);
         }
-        if (request.frontMediaUrl() != null) {
-            card.setFrontMediaUrl(request.frontMediaUrl());
-        }
-        if (request.backText() != null) {
-            card.setBackText(request.backText());
-        }
-        if (request.backMediaUrl() != null) {
-            card.setBackMediaUrl(request.backMediaUrl());
-        }
+
+        validateRichCardRequest(request.term(), request.answer(), request.imageUrl(), request.examples());
+        String examplesJson = writeExamplesJson(normalizeExamples(request.examples()));
+
+        card.setTerm(request.term());
+        card.setAnswer(request.answer());
+        card.setFrontMediaUrl(request.imageUrl());
+        card.setBackMediaUrl(request.imageUrl());
+        card.setImageUrl(request.imageUrl());
+        card.setPartOfSpeech(normalizePlainText(request.partOfSpeech()));
+        card.setPhonetic(normalizePlainText(request.phonetic()));
+        card.setExamplesJson(examplesJson);
 
         try {
             Card saved = cardRepository.save(card);
@@ -379,17 +417,30 @@ public class RelationalPersistenceService {
         }
 
     public record CreateCardRequest(
-            String frontText,
-            String frontMediaUrl,
-            String backText,
-            String backMediaUrl) {
+            String term,
+            String answer,
+            String imageUrl,
+            String partOfSpeech,
+            String phonetic,
+            List<String> examples) {
+
+        public CreateCardRequest(String frontText, String frontMediaUrl, String backText, String backMediaUrl) {
+            this(frontText, backText, firstNonBlank(frontMediaUrl, backMediaUrl), null, null, List.of());
+        }
     }
 
         public record UpdateCardRequest(
-            String frontText,
-            String frontMediaUrl,
-            String backText,
-            String backMediaUrl) {
+            String term,
+            String answer,
+            String imageUrl,
+            String partOfSpeech,
+            String phonetic,
+            List<String> examples,
+            Long version) {
+
+            public UpdateCardRequest(String frontText, String frontMediaUrl, String backText, String backMediaUrl) {
+                this(frontText, backText, firstNonBlank(frontMediaUrl, backMediaUrl), null, null, List.of(), null);
+            }
         }
 
         public record CardSearchQuery(
@@ -439,5 +490,128 @@ public class RelationalPersistenceService {
         if (after != null && !after.equals(before)) {
             mediaReferenceService.incrementReference(after);
         }
+    }
+
+    private void validateRichCardRequest(String term, String answer, String imageUrl, List<String> examples) {
+        if (normalizePlainText(term) == null) {
+            throw rejectValidation("CARD_VALIDATION_TERM_REQUIRED");
+        }
+        if (normalizePlainText(answer) == null) {
+            throw rejectValidation("CARD_VALIDATION_ANSWER_REQUIRED");
+        }
+
+        validateImageUrl(imageUrl);
+        List<String> normalizedExamples = normalizeExamples(examples);
+        if (normalizedExamples.size() > maxExamples) {
+            throw rejectValidation("CARD_VALIDATION_EXAMPLES_LIMIT_EXCEEDED");
+        }
+
+        for (String example : normalizedExamples) {
+            if (example.isBlank()) {
+                throw rejectValidation("CARD_VALIDATION_EXAMPLE_EMPTY");
+            }
+            if (example.length() > maxExampleLength) {
+                throw rejectValidation("CARD_VALIDATION_EXAMPLE_TOO_LONG");
+            }
+        }
+
+        int estimatedBytes = estimatePayloadBytes(term, answer, imageUrl, normalizedExamples);
+        if (estimatedBytes > maxPayloadBytes) {
+            throw rejectValidation("CARD_VALIDATION_PAYLOAD_TOO_LARGE");
+        }
+    }
+
+    private void validateImageUrl(String imageUrl) {
+        String normalized = normalizePlainText(imageUrl);
+        if (normalized == null) {
+            return;
+        }
+
+        try {
+            URI uri = URI.create(normalized);
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
+                throw rejectValidation("CARD_VALIDATION_IMAGE_URL_INVALID");
+            }
+
+            Set<String> allowlist = Arrays.stream(imageAllowlistHosts.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .map(s -> s.toLowerCase(Locale.ROOT))
+                    .collect(Collectors.toSet());
+
+            String host = uri.getHost().toLowerCase(Locale.ROOT);
+            if (!allowlist.isEmpty() && !allowlist.contains(host)) {
+                throw rejectValidation("CARD_VALIDATION_IMAGE_HOST_NOT_ALLOWED");
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new PersistenceValidationException(
+                    PersistenceValidationException.PersistenceErrorCode.VALIDATION_REJECTED,
+                    "CARD_VALIDATION_IMAGE_URL_INVALID",
+                    ex);
+        }
+    }
+
+    private List<String> normalizeExamples(List<String> examples) {
+        if (examples == null) {
+            return List.of();
+        }
+        List<String> normalized = new ArrayList<>(examples.size());
+        for (String example : examples) {
+            String value = normalizePlainText(example);
+            if (value == null) {
+                throw rejectValidation("CARD_VALIDATION_EXAMPLE_EMPTY");
+            }
+            normalized.add(value);
+        }
+        return normalized;
+    }
+
+    private String writeExamplesJson(List<String> examples) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(examples == null ? List.of() : examples);
+        } catch (JsonProcessingException ex) {
+            throw new PersistenceValidationException(
+                    PersistenceValidationException.PersistenceErrorCode.VALIDATION_REJECTED,
+                    "CARD_VALIDATION_EXAMPLES_SERIALIZATION_FAILED",
+                    ex);
+        }
+    }
+
+    private int estimatePayloadBytes(String term, String answer, String imageUrl, List<String> examples) {
+        int sum = 0;
+        sum += term == null ? 0 : term.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+        sum += answer == null ? 0 : answer.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+        sum += imageUrl == null ? 0 : imageUrl.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+        if (examples != null) {
+            for (String example : examples) {
+                sum += example.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+            }
+        }
+        return sum;
+    }
+
+    private String normalizePlainText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String firstNonBlank(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        if (second != null && !second.isBlank()) {
+            return second;
+        }
+        return null;
+    }
+
+    private PersistenceValidationException rejectValidation(String code) {
+        telemetryLogger.richCardValidation(code, java.util.Map.of("feature", "rich-card"));
+        return new PersistenceValidationException(
+                PersistenceValidationException.PersistenceErrorCode.VALIDATION_REJECTED,
+                code);
     }
 }

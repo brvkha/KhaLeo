@@ -10,8 +10,15 @@ export type PrivateDeckDto = {
 export type PrivateCardDto = {
   id: string
   deckId: string
-  frontText: string
-  backText: string
+  term: string
+  answer: string
+  imageUrl: string | null
+  partOfSpeech: string | null
+  phonetic: string | null
+  examples: string[]
+  version: number
+  frontText?: string
+  backText?: string
 }
 
 export type DeckStatsDto = {
@@ -97,14 +104,22 @@ export async function searchPrivateDeckCards(deckId: string, query: string, page
 
 export async function createPrivateCard(payload: {
   deckId: string
-  frontText: string
-  backText: string
+  term: string
+  answer: string
+  imageUrl?: string | null
+  partOfSpeech?: string | null
+  phonetic?: string | null
+  examples?: string[]
 }): Promise<void> {
   await requestJson(`/api/v1/decks/${payload.deckId}/cards`, {
     method: 'POST',
     body: JSON.stringify({
-      frontText: payload.frontText,
-      backText: payload.backText,
+      term: payload.term,
+      answer: payload.answer,
+      imageUrl: payload.imageUrl ?? null,
+      partOfSpeech: payload.partOfSpeech ?? null,
+      phonetic: payload.phonetic ?? null,
+      examples: payload.examples ?? [],
     }),
   })
 }
@@ -117,14 +132,24 @@ export async function deletePrivateCard(cardId: string): Promise<void> {
 
 export async function updatePrivateCard(payload: {
   cardId: string
-  frontText: string
-  backText: string
+  term: string
+  answer: string
+  imageUrl?: string | null
+  partOfSpeech?: string | null
+  phonetic?: string | null
+  examples?: string[]
+  version: number
 }): Promise<void> {
   await requestJson(`/api/v1/cards/${payload.cardId}`, {
     method: 'PUT',
     body: JSON.stringify({
-      frontText: payload.frontText,
-      backText: payload.backText,
+      term: payload.term,
+      answer: payload.answer,
+      imageUrl: payload.imageUrl ?? null,
+      partOfSpeech: payload.partOfSpeech ?? null,
+      phonetic: payload.phonetic ?? null,
+      examples: payload.examples ?? [],
+      version: payload.version,
     }),
   })
 }

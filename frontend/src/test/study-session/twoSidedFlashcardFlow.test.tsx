@@ -6,6 +6,12 @@ import { StudySessionPage } from '../../features/study-session/StudySessionPage'
 
 vi.mock('../../services/studySessionApi', () => ({
   getNextSessionCards: vi.fn(),
+  previewSessionCardRatings: vi.fn(async () => ({
+    again: { nextReviewAt: new Date().toISOString(), scheduledDays: 0, nextState: 'LEARNING' },
+    hard: { nextReviewAt: new Date().toISOString(), scheduledDays: 1, nextState: 'REVIEW' },
+    good: { nextReviewAt: new Date().toISOString(), scheduledDays: 2, nextState: 'REVIEW' },
+    easy: { nextReviewAt: new Date().toISOString(), scheduledDays: 4, nextState: 'REVIEW' },
+  })),
   rateSessionCard: vi.fn(async () => ({
     cardId: 'c1',
     state: 'LEARNING',

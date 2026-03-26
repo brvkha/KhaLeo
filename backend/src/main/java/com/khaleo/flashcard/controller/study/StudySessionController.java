@@ -52,6 +52,7 @@ public class StudySessionController {
             @Valid @RequestBody RateCardRequest request) {
         UUID actorId = deckCardAccessGuard.requireAuthenticatedUserId("rate", "study-session", cardId.toString());
         verifiedAccountGuard.requireVerified(actorId, "rate", "study-session", cardId.toString());
+        // Rich-card projection fields are read/display concerns; rating remains on the existing FSRS path.
         return studyRatingService.rateCard(cardId, request);
     }
 

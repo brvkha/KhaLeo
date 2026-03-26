@@ -5,9 +5,11 @@ import com.khaleo.flashcard.controller.card.dto.CardSearchQuery;
 import com.khaleo.flashcard.controller.card.dto.CreateCardRequest;
 import com.khaleo.flashcard.controller.card.dto.UpdateCardRequest;
 import com.khaleo.flashcard.controller.common.PagedResponse;
+import com.khaleo.flashcard.config.FeatureTelemetryLogger;
 import com.khaleo.flashcard.entity.Card;
 import com.khaleo.flashcard.service.persistence.RelationalPersistenceService;
 import jakarta.validation.Valid;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,20 +30,30 @@ import org.springframework.web.bind.annotation.RestController;
 public class CardController {
 
     private final RelationalPersistenceService relationalPersistenceService;
+    private final FeatureTelemetryLogger telemetryLogger;
 
     @PostMapping("/decks/{deckId}/cards")
     @ResponseStatus(HttpStatus.CREATED)
     public CardResponse createCard(
             @PathVariable("deckId") UUID deckId,
             @Valid @RequestBody CreateCardRequest request) {
-        Card created = relationalPersistenceService.createCard(
+        try {
+            Card created = relationalPersistenceService.createCard(
                 deckId,
                 new RelationalPersistenceService.CreateCardRequest(
-                        request.frontText(),
-                        request.frontMediaUrl(),
-                        request.backText(),
-                        request.backMediaUrl()));
-        return CardResponse.from(created);
+                    request.term(),
+                    request.answer(),
+                    request.imageUrl(),
+                    request.partOfSpeech(),
+                    request.phonetic(),
+                    request.examples()));
+            return CardResponse.from(created);
+        } catch (RuntimeException ex) {
+            telemetryLogger.warn(
+                "rich_card_create_failed",
+                Map.of("deckId", deckId, "error", ex.getClass().getSimpleName()));
+            throw ex;
+        }
     }
 
     @GetMapping("/decks/{deckId}/cards/search")
@@ -67,14 +79,24 @@ public class CardController {
 
     @PutMapping("/cards/{id}")
     public CardResponse updateCard(@PathVariable("id") UUID id, @Valid @RequestBody UpdateCardRequest request) {
-        Card updated = relationalPersistenceService.updateCard(
-                id,
-                new RelationalPersistenceService.UpdateCardRequest(
-                        request.frontText(),
-                        request.frontMediaUrl(),
-                        request.backText(),
-                        request.backMediaUrl()));
-        return CardResponse.from(updated);
+        try {
+            Card updated = relationalPersistenceService.updateCard(
+                    id,
+                    new RelationalPersistenceService.UpdateCardRequest(
+                            request.term(),
+                            request.answer(),
+                            request.imageUrl(),
+                            request.partOfSpeech(),
+                            request.phonetic(),
+                            request.examples(),
+                            request.version()));
+            return CardResponse.from(updated);
+        } catch (RuntimeException ex) {
+            telemetryLogger.warn(
+                    "rich_card_update_failed",
+                    Map.of("cardId", id, "error", ex.getClass().getSimpleName()));
+            throw ex;
+        }
     }
 
     @DeleteMapping("/cards/{id}")

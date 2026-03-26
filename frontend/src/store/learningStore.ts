@@ -7,8 +7,8 @@ type LearningState = {
   createDeck: (name: string, description: string) => void
   updateDeck: (deckId: string, name: string, description: string) => void
   deleteDeck: (deckId: string) => void
-  createCard: (deckId: string, front: string, back: string, tags: string[]) => void
-  updateCard: (cardId: string, front: string, back: string, tags: string[]) => void
+  createCard: (deckId: string, term: string, answer: string, tags: string[]) => void
+  updateCard: (cardId: string, term: string, answer: string, tags: string[]) => void
   deleteCard: (cardId: string) => void
   attachMedia: (cardId: string, mediaUrl: string) => void
   rateCard: (cardId: string, rating: StudyRating) => void
@@ -23,25 +23,37 @@ const initialCards: Card[] = [
   {
     id: 'card-1',
     deckId: 'deck-1',
+    term: 'abandon',
+    answer: 'to leave behind',
     front: 'abandon',
     back: 'to leave behind',
     tags: ['verb', 'b1'],
+    examples: [],
+    version: 0,
     due: true,
   },
   {
     id: 'card-2',
     deckId: 'deck-1',
+    term: 'resilient',
+    answer: 'able to recover quickly',
     front: 'resilient',
     back: 'able to recover quickly',
     tags: ['adjective', 'b2'],
+    examples: [],
+    version: 0,
     due: true,
   },
   {
     id: 'card-3',
     deckId: 'deck-2',
+    term: 'Mitochondria',
+    answer: 'Powerhouse of the cell',
     front: 'Mitochondria',
     back: 'Powerhouse of the cell',
     tags: ['biology'],
+    examples: [],
+    version: 0,
     due: true,
   },
 ]
@@ -67,18 +79,18 @@ export const useLearningStore = create<LearningState>((set) => ({
       cards: state.cards.filter((card) => card.deckId !== deckId),
     }))
   },
-  createCard: (deckId, front, back, tags) => {
+  createCard: (deckId, term, answer, tags) => {
     set((state) => ({
       cards: [
         ...state.cards,
-        { id: crypto.randomUUID(), deckId, front, back, tags, due: true },
+        { id: crypto.randomUUID(), deckId, term, answer, front: term, back: answer, tags, examples: [], version: 0, due: true },
       ],
     }))
   },
-  updateCard: (cardId, front, back, tags) => {
+  updateCard: (cardId, term, answer, tags) => {
     set((state) => ({
       cards: state.cards.map((card) =>
-        card.id === cardId ? { ...card, front, back, tags } : card,
+        card.id === cardId ? { ...card, term, answer, front: term, back: answer, tags, version: (card.version ?? 0) + 1 } : card,
       ),
     }))
   },
@@ -100,6 +112,8 @@ export const useLearningStore = create<LearningState>((set) => ({
         }
         return {
           ...card,
+          front: card.term,
+          back: card.answer,
           due: rating === 'Again',
         }
       }),

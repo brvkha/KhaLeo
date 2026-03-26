@@ -4,15 +4,21 @@ import { useDecks } from '../decks/useDecks'
 import { useCards } from './useCards'
 import { CardSearch } from '../search/CardSearch'
 import { MediaUpload } from '../media/MediaUpload'
+import { RichExamplesInput } from './RichExamplesInput'
+import { RichCardPreview } from './RichCardPreview'
 
 export function CardsPage() {
   const { decks } = useDecks()
   const [deckFilter, setDeckFilter] = useState('')
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
+  const [partOfSpeech, setPartOfSpeech] = useState('')
+  const [phonetic, setPhonetic] = useState('')
+  const [examples, setExamples] = useState<string[]>([])
   const [tags, setTags] = useState('')
   const [search, setSearch] = useState('')
-  const { cards, createCard, deleteCard } = useCards(deckFilter)
+  const { cards, createRichCard, deleteCard } = useCards(deckFilter)
   const [latestMedia, setLatestMedia] = useState('')
 
   const defaultDeckId = useMemo(() => deckFilter || decks[0]?.id || '', [deckFilter, decks])
@@ -22,17 +28,23 @@ export function CardsPage() {
     if (!defaultDeckId || !front.trim() || !back.trim()) {
       return
     }
-    createCard(
-      defaultDeckId,
-      front.trim(),
-      back.trim(),
-      tags
-        .split(',')
+    createRichCard({
+      deckId: defaultDeckId,
+      term: front.trim(),
+      answer: back.trim(),
+      imageUrl: imageUrl.trim() || null,
+      partOfSpeech: partOfSpeech.trim() || null,
+      phonetic: phonetic.trim() || null,
+      examples: examples
         .map((item) => item.trim())
         .filter(Boolean),
-    )
+    })
     setFront('')
     setBack('')
+    setImageUrl('')
+    setPartOfSpeech('')
+    setPhonetic('')
+    setExamples([])
     setTags('')
   }
 
@@ -56,20 +68,44 @@ export function CardsPage() {
       </div>
       <form className="mt-3 grid gap-3 rounded border border-slate-200 bg-white p-4 md:grid-cols-2" onSubmit={onCreate}>
         <input
-          aria-label="Card front"
+          aria-label="Card term"
           className="rounded border border-slate-300 px-3 py-2"
-          placeholder="Front (one concept)"
+          placeholder="Term"
           value={front}
           onChange={(event) => setFront(event.target.value)}
         />
         <textarea
-          aria-label="Card back"
+          aria-label="Card answer"
           className="rounded border border-slate-300 px-3 py-2"
-          placeholder="Back (explanation, examples, markdown, multiline)"
+          placeholder="Answer"
           rows={4}
           value={back}
           onChange={(event) => setBack(event.target.value)}
         />
+        <input
+          aria-label="Card image url"
+          className="rounded border border-slate-300 px-3 py-2"
+          placeholder="Image URL (https only)"
+          value={imageUrl}
+          onChange={(event) => setImageUrl(event.target.value)}
+        />
+        <input
+          aria-label="Card part of speech"
+          className="rounded border border-slate-300 px-3 py-2"
+          placeholder="Part of speech"
+          value={partOfSpeech}
+          onChange={(event) => setPartOfSpeech(event.target.value)}
+        />
+        <input
+          aria-label="Card phonetic"
+          className="rounded border border-slate-300 px-3 py-2 md:col-span-2"
+          placeholder="Phonetic"
+          value={phonetic}
+          onChange={(event) => setPhonetic(event.target.value)}
+        />
+        <div className="md:col-span-2">
+          <RichExamplesInput examples={examples} onChange={setExamples} />
+        </div>
         <input
           aria-label="Card tags"
           className="rounded border border-slate-300 px-3 py-2 md:col-span-2"
@@ -81,6 +117,16 @@ export function CardsPage() {
           Create card
         </button>
       </form>
+      <div className="mt-3">
+        <RichCardPreview
+          term={front}
+          answer={back}
+          imageUrl={imageUrl}
+          partOfSpeech={partOfSpeech}
+          phonetic={phonetic}
+          examples={examples}
+        />
+      </div>
       <div className="mt-3">
         <MediaUpload onUploadSuccess={setLatestMedia} />
         {latestMedia ? <p className="mt-2 text-sm text-emerald-700">Uploaded: {latestMedia}</p> : null}

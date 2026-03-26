@@ -7,9 +7,13 @@ type DeckDto = {
 type CardDto = {
   id: string
   deckId: string
-  front: string
-  back: string
-  tags: string[]
+  term: string
+  answer: string
+  imageUrl?: string | null
+  partOfSpeech?: string | null
+  phonetic?: string | null
+  examples: string[]
+  version: number
 }
 
 export type DeckContract = {
@@ -25,5 +29,5 @@ export function validateDeckContract(input: DeckContract): boolean {
 }
 
 export function validateCardContract(input: CardContract): boolean {
-  return input.cards.every((card) => Boolean(card.id && card.deckId && card.front && card.back))
+  return input.cards.every((card) => Boolean(card.id && card.deckId && card.term && card.answer && Number.isFinite(card.version)))
 }

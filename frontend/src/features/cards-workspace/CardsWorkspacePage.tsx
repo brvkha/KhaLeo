@@ -20,8 +20,9 @@ type DeckOption = {
 type CardItem = {
   id: string
   deckId: string
-  frontText: string
-  backText: string
+  term: string
+  answer: string
+  version: number
 }
 
 const DEFAULT_CARDS_PER_PAGE = 50
@@ -150,8 +151,8 @@ export function CardsWorkspacePage() {
 
   const startEditCard = (card: CardItem) => {
     setEditingCardId(card.id)
-    setEditCardFront(card.frontText)
-    setEditCardBack(card.backText)
+    setEditCardFront(card.term)
+    setEditCardBack(card.answer)
   }
 
   const cancelEditCard = () => {
@@ -169,8 +170,9 @@ export function CardsWorkspacePage() {
       setError('')
       await updatePrivateCard({
         cardId: editingCardId,
-        frontText: editCardFront.trim(),
-        backText: editCardBack.trim(),
+        term: editCardFront.trim(),
+        answer: editCardBack.trim(),
+        version: cards.find((card) => card.id === editingCardId)?.version ?? 0,
       })
       const page = await searchPrivateDeckCards(selectedDeckId, searchTerm, currentPage, pageSize)
       setCards(page.items)
@@ -190,8 +192,9 @@ export function CardsWorkspacePage() {
       setError('')
       await createPrivateCard({
         deckId: selectedDeckId,
-        frontText: front,
-        backText: back,
+        term: front,
+        answer: back,
+        examples: [],
       })
       const page = await searchPrivateDeckCards(selectedDeckId, searchTerm, currentPage, pageSize)
       setCards(page.items)
@@ -421,7 +424,7 @@ export function CardsWorkspacePage() {
                                 onChange={(e) => setEditCardFront(e.target.value)}
                               />
                             ) : (
-                              <p className="whitespace-pre-wrap">{card.frontText}</p>
+                              <p className="whitespace-pre-wrap">{card.term}</p>
                             )}
                           </td>
                           <td className="p-3 text-slate-600">
@@ -433,7 +436,7 @@ export function CardsWorkspacePage() {
                                 onChange={(e) => setEditCardBack(e.target.value)}
                               />
                             ) : (
-                              <p className="max-h-24 overflow-y-auto whitespace-pre-wrap">{card.backText}</p>
+                              <p className="max-h-24 overflow-y-auto whitespace-pre-wrap">{card.answer}</p>
                             )}
                           </td>
                           <td className="p-3 text-right">
